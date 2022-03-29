@@ -1,0 +1,6 @@
+domain: giantswarm.io
+layout:
+- go.kubebuilder.io/v3
+projectName: dns-operator-gcp
+repo: github.com/giantswarm/dns-operator-gcp
+version: "3"
