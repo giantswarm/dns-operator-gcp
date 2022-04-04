@@ -39,8 +39,11 @@ var _ = Describe("Client", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: clusterName,
 			},
+			Spec: capg.GCPClusterSpec{
+				Project: gcpProject,
+			},
 		}
-		client = dns.NewClient(gcpProject, baseDomain, service)
+		client = dns.NewClient(baseDomain, service)
 	})
 
 	Describe("CreateZone", func() {

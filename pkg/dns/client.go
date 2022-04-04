@@ -15,12 +15,10 @@ type Client struct {
 	dnsService *clouddns.Service
 
 	baseDomain string
-	gcpProject string
 }
 
-func NewClient(gcpProject, baseDomain string, dnsService *clouddns.Service) *Client {
+func NewClient(baseDomain string, dnsService *clouddns.Service) *Client {
 	return &Client{
-		gcpProject: gcpProject,
 		baseDomain: baseDomain,
 		dnsService: dnsService,
 	}
@@ -34,7 +32,7 @@ func (c *Client) CreateZone(ctx context.Context, cluster *v1beta1.GCPCluster) er
 		Description: "DNS zone for WC cluster, managed by GCP DNS operator.",
 		Visibility:  "public",
 	}
-	_, err := c.dnsService.ManagedZones.Create(c.gcpProject, zone).
+	_, err := c.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
 		Context(ctx).
 		Do()
 
@@ -46,7 +44,7 @@ func (c *Client) CreateZone(ctx context.Context, cluster *v1beta1.GCPCluster) er
 }
 
 func (c *Client) DeleteZone(ctx context.Context, cluster *v1beta1.GCPCluster) error {
-	err := c.dnsService.ManagedZones.Delete(c.gcpProject, cluster.Name).
+	err := c.dnsService.ManagedZones.Delete(cluster.Spec.Project, cluster.Name).
 		Context(ctx).
 		Do()
 
