@@ -1,0 +1,9 @@
+name: dns-operator-gcp
+version: [[ .Version ]]
+description: "Operator for managing DNS zones and records for CAPG clusters"
+appVersion: "[[ .AppVersion ]]"
+home: "https://github.com/giantswarm/dns-operator-gcp"
+apiVersion: v1
+annotations:
+  application.giantswarm.io/team: "phoenix"
+  config.giantswarm.io/version: 1.x.x
