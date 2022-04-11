@@ -1,6 +1,7 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= quay.io/giantswarm/dns-operator-gcp:latest
+CLUSTER ?= dns-operator-gcp-acceptance
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -39,6 +40,21 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: ensure-acceptance-envs
+ensure-acceptance-envs:
+ifndef GCP_PROJECT_ID
+	$(error GCP_PROJECT_ID is undefined)
+endif
+ifndef CLOUD_DNS_BASE_DOMAIN
+	$(error CLOUD_DNS_BASE_DOMAIN is undefined)
+endif
+
+.PHONY: ensure-deploy-envs
+ensure-deploy-envs:
+ifndef B64_GOOGLE_APPLICATION_CREDENTIALS
+	$(error B64_GOOGLE_APPLICATION_CREDENTIALS is undefined)
+endif
+
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -55,9 +71,24 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: lint
+lint:
+	golangci-lint run -v
+
+.PHONY: create-acceptance-cluster
+create-acceptance-cluster:
+	CLUSTER=$(CLUSTER) IMG=$(IMG) ./scripts/ensure-kind-cluster.sh
+
+.PHONY: deploy-acceptance-cluster
+deploy-acceptance-cluster: docker-build create-acceptance-cluster deploy
+
+.PHONY: test-acceptance
+test-acceptance: ensure-acceptance-envs deploy-acceptance-cluster
+	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" ginkgo -p -r -randomizeAllSpecs --randomizeSuites tests/acceptance
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" ginkgo -p --nodes 8 -r -randomizeAllSpecs --randomizeSuites --skipPackage=tests ./...
 
 ##@ Build
 
@@ -70,7 +101,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
+docker-build: ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
 .PHONY: docker-push
@@ -83,18 +114,20 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
-.PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-
-.PHONY: uninstall
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+.PHONY: render
+render:
+	cp -r helm/dns-operator-gcp helm/rendered/
+	architect helm template --dir helm/rendered/dns-operator-gcp
 
 .PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+deploy: manifests render ensure-deploy-envs ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	helm upgrade --install \
+		--set image.name=giantswarm/dns-operator-gcp \
+		--set image.tag=latest \
+		--set gcp.credentials=$(B64_GOOGLE_APPLICATION_CREDENTIALS) \
+		--set baseDomain=$(CLOUD_DNS_BASE_DOMAIN) \
+		--wait \
+		dns-operator-gcp helm/rendered/dns-operator-gcp
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
@@ -104,11 +137,6 @@ CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 .PHONY: controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
-
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-.PHONY: kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
 
 ENVTEST = $(shell pwd)/bin/setup-envtest
 .PHONY: envtest
