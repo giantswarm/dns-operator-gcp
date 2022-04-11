@@ -43,6 +43,13 @@ func NewGCPClusterReconciler(logger logr.Logger, client GCPClusterClient, dnsCli
 	}
 }
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *GCPClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&capg.GCPCluster{}).
+		Complete(r)
+}
+
 func (r *GCPClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	gcpCluster, err := r.client.Get(ctx, req.NamespacedName)
 	if err != nil {
