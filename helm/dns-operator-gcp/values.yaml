@@ -5,7 +5,7 @@ image:
   name: "giantswarm/dns-operator-gcp"
   tag: "[[ .Version ]]"
 registry:
-  domain: docker.io
+  domain: quay.io
 
 pod:
   user:

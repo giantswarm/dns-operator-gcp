@@ -9,15 +9,12 @@ rules:
       - cluster.x-k8s.io
       - infrastructure.cluster.x-k8s.io
     resources:
-      - openstackclusters
-      - openstackclusters/status
+      - gcpclusters
       - clusters
-      - clusters/status
     verbs:
       - get
       - list
       - patch
-      - update
       - watch
   - apiGroups:
       - coordination.k8s.io
@@ -27,39 +24,6 @@ rules:
       - get
       - create
       - update
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
-      - patch
-      - delete
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps/status
-    verbs:
-      - get
-      - update
-      - patch
-  - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - create
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - watch
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
