@@ -70,11 +70,17 @@ var _ = Describe("DNS", func() {
 
 	When("the cluster is deleted", func() {
 		BeforeEach(func() {
+			Eventually(func() error {
+				_, err := net.LookupNS(host)
+				return err
+			}, "1m", "500ms").Should(Succeed())
+
 			Expect(k8sClient.Delete(ctx, gcpCluster)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, cluster)).To(Succeed())
 		})
 
 		It("removes the dns record", func() {
+			fmt.Println(clusterName)
 			Eventually(func() error {
 				_, err := net.LookupNS(host)
 				return err

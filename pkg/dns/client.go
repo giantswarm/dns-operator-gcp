@@ -34,16 +34,7 @@ func NewClient(baseDomain, parentDNSZone, parentGCPProject string, dnsService *c
 
 func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error {
 	domain := c.getClusterDomain(cluster)
-	zone := &clouddns.ManagedZone{
-		Name:        cluster.Name,
-		DnsName:     domain,
-		Description: "DNS zone for WC cluster, managed by GCP DNS operator.",
-		Visibility:  "public",
-	}
-	zone, err := c.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
-		Context(ctx).
-		Do()
-
+	zone, err := c.createManagedZone(ctx, domain, cluster)
 	if hasHttpCode(err, http.StatusConflict) {
 		return nil
 	}
@@ -51,14 +42,7 @@ func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error
 		return err
 	}
 
-	nsRecord := &clouddns.ResourceRecordSet{
-		Name:    domain,
-		Rrdatas: zone.NameServers,
-		Type:    RecordNS,
-	}
-	_, err = c.dnsService.ResourceRecordSets.Create(c.parentGCPProject, c.parentDNSZone, nsRecord).Do()
-
-	return err
+	return c.createNSRecord(ctx, domain, zone)
 }
 
 func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error {
@@ -80,6 +64,34 @@ func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error
 		return nil
 	}
 	return err
+}
+
+func (c *Client) createNSRecord(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
+	nsRecord := &clouddns.ResourceRecordSet{
+		Name:    domain,
+		Rrdatas: zone.NameServers,
+		Type:    RecordNS,
+	}
+	_, err := c.dnsService.ResourceRecordSets.Create(c.parentGCPProject, c.parentDNSZone, nsRecord).Do()
+
+	return err
+}
+
+func (c *Client) createManagedZone(ctx context.Context, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
+	zone := &clouddns.ManagedZone{
+		Name:        cluster.Name,
+		DnsName:     domain,
+		Description: "DNS zone for WC cluster, managed by GCP DNS operator.",
+		Visibility:  "public",
+	}
+	zone, err := c.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
+		Context(ctx).
+		Do()
+	if err != nil {
+		return nil, err
+	}
+
+	return zone, err
 }
 
 func (c *Client) getClusterDomain(cluster *capg.GCPCluster) string {
