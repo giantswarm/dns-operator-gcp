@@ -25,6 +25,7 @@ var _ = Describe("Client", func() {
 
 		cluster     *capg.GCPCluster
 		clusterName string
+		domain      string
 	)
 
 	BeforeEach(func() {
@@ -43,7 +44,9 @@ var _ = Describe("Client", func() {
 				Project: gcpProject,
 			},
 		}
-		client = dns.NewClient(baseDomain, service)
+		domain = fmt.Sprintf("%s.%s.", cluster.Name, baseDomain)
+
+		client = dns.NewClient(baseDomain, parentDNSZone, gcpProject, service)
 	})
 
 	Describe("CreateZone", func() {
@@ -54,7 +57,10 @@ var _ = Describe("Client", func() {
 		})
 
 		AfterEach(func() {
-			err := service.ManagedZones.Delete(gcpProject, clusterName).Do()
+			_, err := service.ResourceRecordSets.Delete(gcpProject, parentDNSZone, domain, dns.RecordNS).Do()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = service.ManagedZones.Delete(gcpProject, clusterName).Do()
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -62,11 +68,15 @@ var _ = Describe("Client", func() {
 			Expect(createErr).NotTo(HaveOccurred())
 		})
 
-		It("creates a dns zone for the cluster", func() {
+		It("creates a dns zone for the cluster and an NS record in the parent zone", func() {
 			actualZone, err := service.ManagedZones.Get(gcpProject, clusterName).Do()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualZone.Name).To(Equal(cluster.Name))
-			Expect(actualZone.DnsName).To(Equal(fmt.Sprintf("%s.%s.", cluster.Name, baseDomain)))
+			Expect(actualZone.DnsName).To(Equal(domain))
+
+			record, err := service.ResourceRecordSets.Get(gcpProject, parentDNSZone, domain, dns.RecordNS).Do()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(record.Rrdatas).To(ConsistOf(actualZone.NameServers))
 		})
 
 		When("the context has been cancelled", func() {
@@ -104,13 +114,19 @@ var _ = Describe("Client", func() {
 			Expect(deleteErr).NotTo(HaveOccurred())
 		})
 
-		It("deletes the dns zone", func() {
+		It("deletes the dns zone and NS record", func() {
 			actualZone, err := service.ManagedZones.Get(gcpProject, clusterName).Do()
 
 			var googleErr *googleapi.Error
 			Expect(errors.As(err, &googleErr)).To(BeTrue())
 			Expect(googleErr.Code).To(Equal(http.StatusNotFound))
 			Expect(actualZone).To(BeNil())
+
+			record, err := service.ResourceRecordSets.Get(gcpProject, parentDNSZone, domain, dns.RecordNS).Do()
+			Expect(err).To(BeAssignableToTypeOf(&googleapi.Error{}))
+			Expect(errors.As(err, &googleErr)).To(BeTrue())
+			Expect(googleErr.Code).To(Equal(http.StatusNotFound))
+			Expect(record).To(BeNil())
 		})
 
 		When("the context has been cancelled", func() {
@@ -124,8 +140,8 @@ var _ = Describe("Client", func() {
 			})
 		})
 
-		When("the zone already exists", func() {
-			It("does not return an error", func() {
+		When("the zone does not exists", func() {
+			It("return an error", func() {
 				err := client.DeleteZone(ctx, cluster)
 				Expect(err).NotTo(HaveOccurred())
 			})

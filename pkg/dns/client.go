@@ -8,43 +8,71 @@ import (
 
 	clouddns "google.golang.org/api/dns/v1"
 	"google.golang.org/api/googleapi"
-	"sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
+	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
+)
+
+const (
+	RecordNS = "NS"
 )
 
 type Client struct {
 	dnsService *clouddns.Service
 
-	baseDomain string
+	baseDomain       string
+	parentDNSZone    string
+	parentGCPProject string
 }
 
-func NewClient(baseDomain string, dnsService *clouddns.Service) *Client {
+func NewClient(baseDomain, parentDNSZone, parentGCPProject string, dnsService *clouddns.Service) *Client {
 	return &Client{
-		baseDomain: baseDomain,
-		dnsService: dnsService,
+		baseDomain:       baseDomain,
+		parentDNSZone:    parentDNSZone,
+		parentGCPProject: parentGCPProject,
+		dnsService:       dnsService,
 	}
 }
 
-func (c *Client) CreateZone(ctx context.Context, cluster *v1beta1.GCPCluster) error {
-	domain := fmt.Sprintf("%s.%s.", cluster.Name, c.baseDomain)
+func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error {
+	domain := c.getClusterDomain(cluster)
 	zone := &clouddns.ManagedZone{
 		Name:        cluster.Name,
 		DnsName:     domain,
 		Description: "DNS zone for WC cluster, managed by GCP DNS operator.",
 		Visibility:  "public",
 	}
-	_, err := c.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
+	zone, err := c.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
 		Context(ctx).
 		Do()
 
 	if hasHttpCode(err, http.StatusConflict) {
 		return nil
 	}
+	if err != nil {
+		return err
+	}
+
+	nsRecord := &clouddns.ResourceRecordSet{
+		Name:    domain,
+		Rrdatas: zone.NameServers,
+		Type:    RecordNS,
+	}
+	_, err = c.dnsService.ResourceRecordSets.Create(c.parentGCPProject, c.parentDNSZone, nsRecord).Do()
 
 	return err
 }
 
-func (c *Client) DeleteZone(ctx context.Context, cluster *v1beta1.GCPCluster) error {
-	err := c.dnsService.ManagedZones.Delete(cluster.Spec.Project, cluster.Name).
+func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error {
+	domain := c.getClusterDomain(cluster)
+
+	_, err := c.dnsService.ResourceRecordSets.Delete(c.parentGCPProject, c.parentDNSZone, domain, RecordNS).
+		Context(ctx).
+		Do()
+
+	if err != nil && !hasHttpCode(err, http.StatusNotFound) {
+		return err
+	}
+
+	err = c.dnsService.ManagedZones.Delete(cluster.Spec.Project, cluster.Name).
 		Context(ctx).
 		Do()
 
@@ -52,6 +80,10 @@ func (c *Client) DeleteZone(ctx context.Context, cluster *v1beta1.GCPCluster) er
 		return nil
 	}
 	return err
+}
+
+func (c *Client) getClusterDomain(cluster *capg.GCPCluster) string {
+	return fmt.Sprintf("%s.%s.", cluster.Name, c.baseDomain)
 }
 
 func hasHttpCode(err error, statusCode int) bool {

@@ -54,8 +54,9 @@ func init() {
 }
 
 func main() {
-	var gcpProject string
 	var baseDomain string
+	var parentDNSZone string
+	var gcpProject string
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -63,6 +64,8 @@ func main() {
 		"The gcp project id where the dns records will be created.")
 	flag.StringVar(&baseDomain, "base-domain", "",
 		"The base domain to use when creating dns records.")
+	flag.StringVar(&parentDNSZone, "parent-dns-zone", "",
+		"The parent Cloud DNS zone, where the base domain is registered.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080",
 		"The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081",
@@ -99,7 +102,7 @@ func main() {
 	}
 
 	client := k8sclient.NewGCPCluster(mgr.GetClient())
-	dnsClient := dns.NewClient(baseDomain, service)
+	dnsClient := dns.NewClient(baseDomain, parentDNSZone, gcpProject, service)
 	controller := controllers.NewGCPClusterReconciler(mgr.GetLogger(), client, dnsClient)
 	err = controller.SetupWithManager(mgr)
 	if err != nil {

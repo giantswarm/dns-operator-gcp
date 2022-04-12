@@ -19,14 +19,17 @@ var _ = Describe("DNS", func() {
 		ctx context.Context
 
 		clusterName string
+		host        string
+		cluster     *capi.Cluster
 		gcpCluster  *capg.GCPCluster
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		clusterName = generateGUID("test")
+		host = fmt.Sprintf("%s.%s.", clusterName, baseDomain)
 
-		cluster := &capi.Cluster{
+		cluster = &capi.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      clusterName,
 				Namespace: namespace,
@@ -55,15 +58,32 @@ var _ = Describe("DNS", func() {
 	})
 
 	It("creates an NS record for the cluster", func() {
-		host := fmt.Sprintf("%s.%s.", clusterName, baseDomain)
-
 		var records []*net.NS
 		Eventually(func() error {
 			var err error
 			records, err = net.LookupNS(host)
 			return err
-		}, "1m").Should(Succeed())
+		}, "1m", "500ms").Should(Succeed())
 
 		Expect(records).ToNot(BeEmpty())
+	})
+
+	When("the cluster is deleted", func() {
+		BeforeEach(func() {
+			Expect(k8sClient.Delete(ctx, gcpCluster)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, cluster)).To(Succeed())
+		})
+
+		It("removes the dns record", func() {
+			Eventually(func() error {
+				_, err := net.LookupNS(host)
+				return err
+			}, "1m", "500ms").ShouldNot(Succeed())
+
+			Consistently(func() error {
+				_, err := net.LookupNS(host)
+				return err
+			}, "15s", "500ms").ShouldNot(Succeed())
+		})
 	})
 })

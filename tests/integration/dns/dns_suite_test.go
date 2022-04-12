@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	baseDomain string
-	gcpProject string
+	baseDomain    string
+	parentDNSZone string
+	gcpProject    string
 )
 
 func TestDns(t *testing.T) {
@@ -22,6 +23,7 @@ func TestDns(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	baseDomain = getEnvOrFail("CLOUD_DNS_BASE_DOMAIN")
+	parentDNSZone = getEnvOrFail("CLOUD_DNS_PARENT_ZONE")
 	gcpProject = getEnvOrFail("GCP_PROJECT_ID")
 })
 
