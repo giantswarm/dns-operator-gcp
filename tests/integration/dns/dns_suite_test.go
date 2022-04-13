@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+const slowTestThreshold = 30 * time.Second
 
 var (
 	baseDomain    string
@@ -17,8 +20,11 @@ var (
 )
 
 func TestDns(t *testing.T) {
+	suiteConfig, reporterConfig := GinkgoConfiguration()
+	reporterConfig.SlowSpecThreshold = slowTestThreshold
+
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Dns Suite")
+	RunSpecs(t, "Dns Suite", suiteConfig, reporterConfig)
 }
 
 var _ = BeforeSuite(func() {
