@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,7 +17,8 @@ import (
 
 var _ = Describe("DNS", func() {
 	var (
-		ctx context.Context
+		ctx      context.Context
+		resolver *net.Resolver
 
 		clusterName string
 		host        string
@@ -28,6 +30,16 @@ var _ = Describe("DNS", func() {
 		ctx = context.Background()
 		clusterName = generateGUID("test")
 		host = fmt.Sprintf("%s.%s.", clusterName, baseDomain)
+
+		resolver = &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{
+					Timeout: time.Millisecond * time.Duration(10000),
+				}
+				return d.DialContext(ctx, "udp", "8.8.8.8:53")
+			},
+		}
 
 		cluster = &capi.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -61,7 +73,7 @@ var _ = Describe("DNS", func() {
 		var records []*net.NS
 		Eventually(func() error {
 			var err error
-			records, err = net.LookupNS(host)
+			records, err = resolver.LookupNS(ctx, host)
 			return err
 		}, "1m", "500ms").Should(Succeed())
 
@@ -71,7 +83,7 @@ var _ = Describe("DNS", func() {
 	When("the cluster is deleted", func() {
 		BeforeEach(func() {
 			Eventually(func() error {
-				_, err := net.LookupNS(host)
+				_, err := resolver.LookupNS(ctx, host)
 				return err
 			}, "1m", "500ms").Should(Succeed())
 
@@ -80,16 +92,10 @@ var _ = Describe("DNS", func() {
 		})
 
 		It("removes the dns record", func() {
-			fmt.Println(clusterName)
 			Eventually(func() error {
-				_, err := net.LookupNS(host)
+				_, err := resolver.LookupNS(ctx, host)
 				return err
 			}, "1m", "500ms").ShouldNot(Succeed())
-
-			Consistently(func() error {
-				_, err := net.LookupNS(host)
-				return err
-			}, "15s", "500ms").ShouldNot(Succeed())
 		})
 	})
 })
