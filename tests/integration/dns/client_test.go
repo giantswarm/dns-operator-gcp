@@ -2,17 +2,18 @@ package dns_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/onsi/gomega/format"
+	"github.com/onsi/gomega/types"
 
 	clouddns "google.golang.org/api/dns/v1"
 	"google.golang.org/api/googleapi"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 )
 
@@ -98,6 +99,107 @@ var _ = Describe("Client", func() {
 		})
 	})
 
+	Describe("A Records", func() {
+		var (
+			apiDomain            string
+			controlPlaneEndpoint string
+
+			createErr error
+		)
+
+		BeforeEach(func() {
+			// Any private range IP address will do for the test.
+			// Load Balancers in GCP have a external IP address.
+			controlPlaneEndpoint = "10.0.0.1"
+			cluster.Spec.ControlPlaneEndpoint.Host = controlPlaneEndpoint
+			apiDomain = fmt.Sprintf("api.%s.%s.", clusterName, baseDomain)
+
+			err := client.CreateZone(ctx, cluster)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			_, err := service.ResourceRecordSets.Delete(gcpProject, parentDNSZone, domain, dns.RecordNS).Do()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = service.ManagedZones.Delete(gcpProject, clusterName).Do()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Describe("CreateARecords", func() {
+			JustBeforeEach(func() {
+				createErr = client.CreateARecords(ctx, cluster)
+			})
+
+			AfterEach(func() {
+				_, err := service.ResourceRecordSets.Delete(gcpProject, clusterName, apiDomain, dns.RecordA).Do()
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("creates the A record", func() {
+				Expect(createErr).NotTo(HaveOccurred())
+
+				record, err := service.ResourceRecordSets.Get(gcpProject, clusterName, apiDomain, dns.RecordA).Do()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(record.Rrdatas).To(ConsistOf(controlPlaneEndpoint))
+			})
+
+			When("the context has been cancelled", func() {
+				It("returns an error", func() {
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithCancel(ctx)
+					cancel()
+
+					err := client.CreateARecords(ctx, cluster)
+					Expect(err).To(MatchError(ContainSubstring("context canceled")))
+				})
+			})
+
+			When("the record already exists", func() {
+				It("returns an error", func() {
+					err := client.CreateARecords(ctx, cluster)
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+		})
+
+		Describe("DeleteARecords", func() {
+			BeforeEach(func() {
+				err := client.CreateARecords(ctx, cluster)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				createErr = client.DeleteARecords(ctx, cluster)
+			})
+
+			It("deletes the A record", func() {
+				Expect(createErr).NotTo(HaveOccurred())
+
+				_, err := service.ResourceRecordSets.Get(gcpProject, clusterName, apiDomain, dns.RecordA).Do()
+				Expect(err).To(BeGoogleAPIErrorWithStatus(http.StatusNotFound))
+			})
+
+			When("the context has been cancelled", func() {
+				It("returns an error", func() {
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithCancel(ctx)
+					cancel()
+
+					err := client.DeleteARecords(ctx, cluster)
+					Expect(err).To(MatchError(ContainSubstring("context canceled")))
+				})
+			})
+
+			When("the record no longer exists", func() {
+				It("returns an error", func() {
+					err := client.DeleteARecords(ctx, cluster)
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+		})
+	})
+
 	Describe("DeleteZone", func() {
 		var deleteErr error
 
@@ -116,16 +218,11 @@ var _ = Describe("Client", func() {
 
 		It("deletes the dns zone and NS record", func() {
 			actualZone, err := service.ManagedZones.Get(gcpProject, clusterName).Do()
-
-			var googleErr *googleapi.Error
-			Expect(errors.As(err, &googleErr)).To(BeTrue())
-			Expect(googleErr.Code).To(Equal(http.StatusNotFound))
+			Expect(err).To(BeGoogleAPIErrorWithStatus(http.StatusNotFound))
 			Expect(actualZone).To(BeNil())
 
 			record, err := service.ResourceRecordSets.Get(gcpProject, parentDNSZone, domain, dns.RecordNS).Do()
-			Expect(err).To(BeAssignableToTypeOf(&googleapi.Error{}))
-			Expect(errors.As(err, &googleErr)).To(BeTrue())
-			Expect(googleErr.Code).To(Equal(http.StatusNotFound))
+			Expect(err).To(BeGoogleAPIErrorWithStatus(http.StatusNotFound))
 			Expect(record).To(BeNil())
 		})
 
@@ -148,3 +245,51 @@ var _ = Describe("Client", func() {
 		})
 	})
 })
+
+type beGoogleAPIErrorWithStatusMatcher struct {
+	expected int
+}
+
+func BeGoogleAPIErrorWithStatus(expected int) types.GomegaMatcher {
+	return &beGoogleAPIErrorWithStatusMatcher{expected: expected}
+}
+
+func (m *beGoogleAPIErrorWithStatusMatcher) Match(actual interface{}) (bool, error) {
+	if actual == nil {
+		return false, nil
+	}
+
+	actualError, isError := actual.(error)
+	if !isError {
+		return false, fmt.Errorf("%#v is not an error", actual)
+	}
+
+	matches, err := BeAssignableToTypeOf(actualError).Match(&googleapi.Error{})
+	if err != nil || !matches {
+		return false, err
+	}
+
+	googleAPIError, isGoogleAPIError := actual.(*googleapi.Error)
+	if !isGoogleAPIError {
+		return false, fmt.Errorf("%#v is not a google api error", actual)
+	}
+	return Equal(googleAPIError.Code).Match(m.expected)
+}
+
+func (m *beGoogleAPIErrorWithStatusMatcher) FailureMessage(actual interface{}) (message string) {
+	return format.Message(
+		actual,
+		fmt.Sprintf("to be a google api error with status code: %s", m.getExpectedStatusText()),
+	)
+}
+
+func (m *beGoogleAPIErrorWithStatusMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+	return format.Message(
+		actual,
+		fmt.Sprintf("to not be a google api error with status: %s", m.getExpectedStatusText()),
+	)
+}
+
+func (m *beGoogleAPIErrorWithStatusMatcher) getExpectedStatusText() string {
+	return fmt.Sprintf("%d %s", m.expected, http.StatusText(m.expected))
+}

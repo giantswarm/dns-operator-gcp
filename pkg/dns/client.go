@@ -13,6 +13,9 @@ import (
 
 const (
 	RecordNS = "NS"
+	RecordA  = "A"
+
+	EndpointAPI = "api"
 )
 
 type Client struct {
@@ -42,7 +45,40 @@ func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error
 		return err
 	}
 
-	return c.createNSRecord(ctx, domain, zone)
+	return c.registerNSInParentZone(ctx, domain, zone)
+}
+
+func (c *Client) CreateARecords(ctx context.Context, cluster *capg.GCPCluster) error {
+	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, c.baseDomain)
+
+	record := &clouddns.ResourceRecordSet{
+		Name: apiDomain,
+		Rrdatas: []string{
+			cluster.Spec.ControlPlaneEndpoint.Host,
+		},
+		Type: RecordA,
+	}
+	_, err := c.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
+		Context(ctx).
+		Do()
+
+	if hasHttpCode(err, http.StatusConflict) {
+		return nil
+	}
+	return err
+}
+
+func (c *Client) DeleteARecords(ctx context.Context, cluster *capg.GCPCluster) error {
+	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, c.baseDomain)
+	_, err := c.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, apiDomain, RecordA).
+		Context(ctx).
+		Do()
+
+	if hasHttpCode(err, http.StatusNotFound) {
+		return nil
+	}
+
+	return err
 }
 
 func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error {
@@ -66,13 +102,15 @@ func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error
 	return err
 }
 
-func (c *Client) createNSRecord(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
+func (c *Client) registerNSInParentZone(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
 	nsRecord := &clouddns.ResourceRecordSet{
 		Name:    domain,
 		Rrdatas: zone.NameServers,
 		Type:    RecordNS,
 	}
-	_, err := c.dnsService.ResourceRecordSets.Create(c.parentGCPProject, c.parentDNSZone, nsRecord).Do()
+	_, err := c.dnsService.ResourceRecordSets.Create(c.parentGCPProject, c.parentDNSZone, nsRecord).
+		Context(ctx).
+		Do()
 
 	return err
 }
