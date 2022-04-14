@@ -86,6 +86,14 @@ var _ = Describe("GCPClusterReconciler", func() {
 		Expect(actualCluster).To(Equal(gcpCluster))
 	})
 
+	It("creates the A records", func() {
+		Expect(dnsClient.CreateARecordsCallCount()).To(Equal(1))
+
+		actualContext, actualCluster := dnsClient.CreateARecordsArgsForCall(0)
+		Expect(actualContext).To(Equal(ctx))
+		Expect(actualCluster).To(Equal(gcpCluster))
+	})
+
 	When("the gcp cluster is marked for deletion", func() {
 		BeforeEach(func() {
 			now := v1.Now()
@@ -100,6 +108,14 @@ var _ = Describe("GCPClusterReconciler", func() {
 			Expect(finalizer).To(Equal(controllers.FinalizerDNS))
 		})
 
+		It("deletes the A records", func() {
+			Expect(dnsClient.DeleteARecordsCallCount()).To(Equal(1))
+
+			actualContext, actualCluster := dnsClient.DeleteARecordsArgsForCall(0)
+			Expect(actualContext).To(Equal(ctx))
+			Expect(actualCluster).To(Equal(gcpCluster))
+		})
+
 		It("deletes the dns zone", func() {
 			Expect(dnsClient.DeleteZoneCallCount()).To(Equal(1))
 
@@ -111,6 +127,20 @@ var _ = Describe("GCPClusterReconciler", func() {
 		When("deleting the dns zone fails", func() {
 			BeforeEach(func() {
 				dnsClient.DeleteZoneReturns(errors.New("boom"))
+			})
+
+			It("returns an error", func() {
+				Expect(reconcileErr).To(HaveOccurred())
+			})
+
+			It("does not remove the finalizer", func() {
+				Expect(client.RemoveFinalizerCallCount()).To(Equal(0))
+			})
+		})
+
+		When("deleting the A records fails", func() {
+			BeforeEach(func() {
+				dnsClient.DeleteARecordsReturns(errors.New("boom"))
 			})
 
 			It("returns an error", func() {
@@ -218,6 +248,16 @@ var _ = Describe("GCPClusterReconciler", func() {
 	When("creating DNS zone fails", func() {
 		BeforeEach(func() {
 			dnsClient.CreateZoneReturns(errors.New("boom"))
+		})
+
+		It("does not reconcile", func() {
+			Expect(reconcileErr).To(MatchError(ContainSubstring("boom")))
+		})
+	})
+
+	When("creating A records fails", func() {
+		BeforeEach(func() {
+			dnsClient.CreateARecordsReturns(errors.New("boom"))
 		})
 
 		It("does not reconcile", func() {

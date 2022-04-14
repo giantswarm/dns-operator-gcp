@@ -26,6 +26,8 @@ type GCPClusterClient interface {
 //counterfeiter:generate . CloudDNSClient
 type CloudDNSClient interface {
 	CreateZone(context.Context, *capg.GCPCluster) error
+	CreateARecords(context.Context, *capg.GCPCluster) error
+	DeleteARecords(context.Context, *capg.GCPCluster) error
 	DeleteZone(context.Context, *capg.GCPCluster) error
 }
 
@@ -92,11 +94,21 @@ func (r *GCPClusterReconciler) reconcileNormal(ctx context.Context, gcpCluster *
 		return ctrl.Result{}, microerror.Mask(err)
 	}
 
+	err = r.dnsClient.CreateARecords(ctx, gcpCluster)
+	if err != nil {
+		return ctrl.Result{}, microerror.Mask(err)
+	}
+
 	return ctrl.Result{}, nil
 }
 
 func (r *GCPClusterReconciler) reconcileDelete(ctx context.Context, gcpCluster *capg.GCPCluster) (ctrl.Result, error) {
-	err := r.dnsClient.DeleteZone(ctx, gcpCluster)
+	err := r.dnsClient.DeleteARecords(ctx, gcpCluster)
+	if err != nil {
+		return ctrl.Result{}, microerror.Mask(err)
+	}
+
+	err = r.dnsClient.DeleteZone(ctx, gcpCluster)
 	if err != nil {
 		return ctrl.Result{}, microerror.Mask(err)
 	}
