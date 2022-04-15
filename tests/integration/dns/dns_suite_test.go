@@ -1,12 +1,10 @@
 package dns_test
 
 import (
-	"fmt"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/giantswarm/dns-operator-gcp/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -28,22 +26,7 @@ func TestDns(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	baseDomain = getEnvOrFail("CLOUD_DNS_BASE_DOMAIN")
-	parentDNSZone = getEnvOrFail("CLOUD_DNS_PARENT_ZONE")
-	gcpProject = getEnvOrFail("GCP_PROJECT_ID")
+	baseDomain = tests.GetEnvOrSkip("CLOUD_DNS_BASE_DOMAIN")
+	parentDNSZone = tests.GetEnvOrSkip("CLOUD_DNS_PARENT_ZONE")
+	gcpProject = tests.GetEnvOrSkip("GCP_PROJECT_ID")
 })
-
-func generateGUID(prefix string) string {
-	guid := uuid.NewString()
-
-	return fmt.Sprintf("%s-%s", prefix, guid[:13])
-}
-
-func getEnvOrFail(env string) string {
-	value := os.Getenv(env)
-	if value == "" {
-		Fail(fmt.Sprintf("%s not exported", env))
-	}
-
-	return value
-}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
+	"github.com/giantswarm/dns-operator-gcp/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -36,7 +37,7 @@ var _ = Describe("Client", func() {
 		service, err = clouddns.NewService(context.Background())
 		Expect(err).NotTo(HaveOccurred())
 
-		clusterName = generateGUID("test")
+		clusterName = tests.GenerateGUID("test")
 		cluster = &capg.GCPCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: clusterName,

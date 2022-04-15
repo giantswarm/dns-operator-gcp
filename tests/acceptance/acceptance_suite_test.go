@@ -2,10 +2,9 @@ package acceptance_test
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"testing"
 
+	"github.com/giantswarm/dns-operator-gcp/tests"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,8 +31,8 @@ func TestAcceptance(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	gcpProject = getEnvOrFail("GCP_PROJECT_ID")
-	baseDomain = getEnvOrFail("CLOUD_DNS_BASE_DOMAIN")
+	gcpProject = tests.GetEnvOrSkip("GCP_PROJECT_ID")
+	baseDomain = tests.GetEnvOrSkip("CLOUD_DNS_BASE_DOMAIN")
 
 	config, err := controllerruntime.GetConfig()
 	Expect(err).NotTo(HaveOccurred())
@@ -58,18 +57,3 @@ var _ = BeforeEach(func() {
 var _ = AfterEach(func() {
 	Expect(k8sClient.Delete(context.Background(), namespaceObj)).To(Succeed())
 })
-
-func generateGUID(prefix string) string {
-	guid := uuid.NewString()
-
-	return fmt.Sprintf("%s-%s", prefix, guid[:13])
-}
-
-func getEnvOrFail(env string) string {
-	value := os.Getenv(env)
-	if value == "" {
-		Fail(fmt.Sprintf("%s not exported", env))
-	}
-
-	return value
-}

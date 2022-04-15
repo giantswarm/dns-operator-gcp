@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
+	"github.com/giantswarm/dns-operator-gcp/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -30,7 +31,7 @@ var _ = Describe("DNS", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		clusterName = generateGUID("test")
+		clusterName = tests.GenerateGUID("test")
 		clusterDomain = fmt.Sprintf("%s.%s.", clusterName, baseDomain)
 		apiDomain = fmt.Sprintf("%s.%s", dns.EndpointAPI, clusterDomain)
 
