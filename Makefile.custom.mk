@@ -84,16 +84,16 @@ create-acceptance-cluster:
 deploy-acceptance-cluster: docker-build create-acceptance-cluster deploy
 
 .PHONY: test-unit
-test-unit: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" ginkgo -p --nodes 8 -r -randomizeAllSpecs --randomizeSuites --skipPackage=tests ./...
+test-unit: ginkgo manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p --nodes 8 -r -randomize-all --randomize-suites --skip-package=tests ./...
 
 .PHONY: test-integration
-test-integration: ensure-integration-envs ## Run integration tests
-	ginkgo -p -r -randomizeAllSpecs --randomizeSuites tests/integration
+test-integration: ginkgo ensure-integration-envs ## Run integration tests
+	$(GINKGO) -p -r -randomize-all --randomize-suites tests/integration
 
 .PHONY: test-acceptance
-test-acceptance: ensure-gcp-envs deploy-acceptance-cluster ## Run acceptance testst
-	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" ginkgo -p -r -randomizeAllSpecs --randomizeSuites tests/acceptance
+test-acceptance: ginkgo ensure-gcp-envs deploy-acceptance-cluster ## Run acceptance testst
+	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" $(GINKGO) -p -r -randomize-all --randomize-suites tests/acceptance
 
 ##@ Build
 
@@ -141,6 +141,11 @@ ENVTEST = $(shell pwd)/bin/setup-envtest
 .PHONY: envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
+
+GINKGO = $(shell pwd)/bin/ginkgo
+.PHONY: ginkgo
+ginkgo: ## Download ginkgo locally if necessary.
+	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@latest)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
