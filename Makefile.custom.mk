@@ -84,7 +84,7 @@ create-acceptance-cluster:
 deploy-acceptance-cluster: docker-build create-acceptance-cluster deploy
 
 .PHONY: test-unit
-test-unit: ginkgo manifests generate fmt vet envtest ## Run tests.
+test-unit: ginkgo generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p --nodes 8 -r -randomize-all --randomize-suites --skip-package=tests ./...
 
 .PHONY: test-integration
