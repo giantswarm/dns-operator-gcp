@@ -1,0 +1,26 @@
+version: 2.1
+orbs:
+  architect: giantswarm/architect@4.16.0
+
+jobs:
+  unit-tests:
+    executor: architect/architect
+    steps:
+      - checkout
+      - run:
+          name: "Run tests"
+          command: CGO_ENABLED=0 make test-unit
+workflows:
+  build:
+    jobs:
+      - unit-tests
+      - architect/integration-test:
+          context: architect
+          name: acceptance-tests
+          install-app-platform: true
+          test-dir: "tests/..."
+          filters:
+            # Do not trigger the job on merge to master.
+            branches:
+              ignore:
+                - master
