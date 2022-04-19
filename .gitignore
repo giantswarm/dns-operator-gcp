@@ -26,3 +26,6 @@ testbin/*
 
 # architect rendered helm chart
 helm/rendered/*
+
+# circle ci env file
+*.env

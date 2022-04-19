@@ -19,6 +19,8 @@ workflows:
           name: acceptance-tests
           install-app-platform: true
           test-dir: "tests/..."
+          setup-script: "scripts/setup-tests.sh"
+          env-file: "tests/.env"
           filters:
             # Do not trigger the job on merge to master.
             branches:
