@@ -1,6 +1,12 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/giantswarm/dns-operator-gcp:latest
+IMG ?= quay.io/giantswarm/dns-operator-gcp:dev
+
+# Substitute colon with space - this creates a list.
+# Word selects the n-th element of the list
+IMAGE_REPO = $(word 1,$(subst :, ,$(IMG)))
+IMAGE_TAG = $(word 2,$(subst :, ,$(IMG)))
+
 CLUSTER ?= dns-operator-gcp-acceptance
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
@@ -119,8 +125,7 @@ render:
 .PHONY: deploy
 deploy: manifests render ensure-deploy-envs ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	helm upgrade --install \
-		--set image.name=giantswarm/dns-operator-gcp \
-		--set image.tag=latest \
+		--set image.tag=$(IMAGE_TAG) \
 		--set gcp.credentials=$(B64_GOOGLE_APPLICATION_CREDENTIALS) \
 		--set baseDomain=$(CLOUD_DNS_BASE_DOMAIN) \
 		--set parentDNSZone=$(CLOUD_DNS_PARENT_ZONE) \
