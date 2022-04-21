@@ -54,12 +54,6 @@ ifndef CLOUD_DNS_PARENT_ZONE
 	$(error CLOUD_DNS_PARENT_ZONE is undefined)
 endif
 
-.PHONY: ensure-integration-envs
-ensure-integration-envs: ensure-gcp-envs
-ifndef GOOGLE_APPLICATION_CREDENTIALS
-	$(error GOOGLE_APPLICATION_CREDENTIALS is undefined)
-endif
-
 .PHONY: ensure-deploy-envs
 ensure-deploy-envs: ensure-gcp-envs
 ifndef B64_GOOGLE_APPLICATION_CREDENTIALS
@@ -98,12 +92,17 @@ test-unit: ginkgo generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p --nodes 8 -r -randomize-all --randomize-suites --skip-package=tests ./...
 
 .PHONY: test-integration
-test-integration: ginkgo ensure-integration-envs ## Run integration tests
-	$(GINKGO) -p -r -randomize-all --randomize-suites tests/integration
+test-integration: ginkgo ensure-gcp-envs ## Run integration tests
+	$(eval GOOGLE_APPLICATION_CREDENTIALS=$(shell ${PWD}/scripts/create-gcp-credentials-file.sh))
+	GOOGLE_APPLICATION_CREDENTIALS=$(GOOGLE_APPLICATION_CREDENTIALS) $(GINKGO) -p -r -randomize-all --randomize-suites tests/integration
+	rm $(GOOGLE_APPLICATION_CREDENTIALS)
 
 .PHONY: test-acceptance
 test-acceptance: ginkgo ensure-gcp-envs deploy-acceptance-cluster ## Run acceptance testst
 	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" $(GINKGO) -p -r -randomize-all --randomize-suites tests/acceptance
+
+.PHONY: test-all
+test-all: lint test-unit test-integration test-acceptance ## Run all tests and litner
 
 ##@ Build
 
