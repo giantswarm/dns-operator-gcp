@@ -83,11 +83,15 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: create-acceptance-cluster
-create-acceptance-cluster:
+create-acceptance-cluster: kind
 	CLUSTER=$(CLUSTER) IMG=$(IMG) ./scripts/ensure-kind-cluster.sh
 
+.PHONY: install-cluster-api
+install-cluster-api: clusterctl
+	GCP_B64ENCODED_CREDENTIALS="" $(CLUSTERCTL) init --kubeconfig "${HOME}/.kube/$(CLUSTER).yml" --infrastructure=gcp --wait-providers || true
+
 .PHONY: deploy-acceptance-cluster
-deploy-acceptance-cluster: docker-build create-acceptance-cluster deploy
+deploy-acceptance-cluster: docker-build create-acceptance-cluster install-cluster-api deploy
 
 .PHONY: test-unit
 test-unit: ginkgo generate fmt vet envtest ## Run tests.
@@ -118,9 +122,10 @@ ifndef ignore-not-found
 endif
 
 .PHONY: render
-render:
-	cp -r helm/dns-operator-gcp helm/rendered/
-	architect helm template --dir helm/rendered/dns-operator-gcp
+render: architect
+	mkdir -p $(shell pwd)/helm/rendered
+	cp -r $(shell pwd)/helm/dns-operator-gcp $(shell pwd)/helm/rendered/
+	$(ARCHITECT) helm template --dir $(shell pwd)/helm/rendered/dns-operator-gcp
 
 .PHONY: deploy
 deploy: manifests render ensure-deploy-envs ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -152,6 +157,23 @@ GINKGO = $(shell pwd)/bin/ginkgo
 ginkgo: ## Download ginkgo locally if necessary.
 	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo@latest)
 
+ARCHITECT = $(shell pwd)/bin/architect
+.PHONY: architect
+architect: ## Download architect locally if necessary.
+	$(call go-get-tool,$(ARCHITECT),github.com/giantswarm/architect@latest)
+
+KIND = $(shell pwd)/bin/kind
+.PHONY: kind
+kind: ## Download kind locally if necessary.
+	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@latest)
+
+CLUSTERCTL = $(shell pwd)/bin/clusterctl
+.PHONY: clusterctl
+clusterctl: ## Download clusterctl locally if necessary.
+	$(eval LATEST_RELEASE = $(shell curl -s https://api.github.com/repos/kubernetes-sigs/cluster-api/releases/latest | jq -r '.tag_name'))
+	curl -sL "https://github.com/kubernetes-sigs/cluster-api/releases/download/$(LATEST_RELEASE)/clusterctl-linux-amd64" -o $(CLUSTERCTL)
+	chmod +x $(CLUSTERCTL)
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
@@ -161,7 +183,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
