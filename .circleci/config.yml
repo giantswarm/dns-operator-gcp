@@ -1,8 +1,15 @@
 version: 2.1
 orbs:
-  architect: giantswarm/architect@4.16.0
+  architect: giantswarm/architect@4.17.0
 
 jobs:
+  lint:
+    executor: architect/architect
+    steps:
+      - checkout
+      - run:
+          name: "Run unit tests"
+          command: CGO_ENABLED=0 make lint
   unit-tests:
     executor: architect/architect
     steps:
@@ -26,7 +33,7 @@ jobs:
       - architect/machine-install-go
       - architect/integration-test-install-tools:
           apptestctl-version: v0.14.1
-          helm-version: v3.6.3
+          helm-version: v3.8.2
           kubernetes-version: v1.21.1
       - run:
           name: "Run acceptance tests"
