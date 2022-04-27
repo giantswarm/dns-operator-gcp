@@ -27,6 +27,7 @@ func TestDns(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	tests.GetEnvOrSkip("GOOGLE_APPLICATION_CREDENTIALS")
 	baseDomain = tests.GetEnvOrSkip("CLOUD_DNS_BASE_DOMAIN")
 	parentDNSZone = tests.GetEnvOrSkip("CLOUD_DNS_PARENT_ZONE")
 	gcpProject = tests.GetEnvOrSkip("GCP_PROJECT_ID")

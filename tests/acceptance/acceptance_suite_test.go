@@ -32,6 +32,7 @@ func TestAcceptance(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	tests.GetEnvOrSkip("KUBECONFIG")
 	gcpProject = tests.GetEnvOrSkip("GCP_PROJECT_ID")
 	baseDomain = tests.GetEnvOrSkip("CLOUD_DNS_BASE_DOMAIN")
 
