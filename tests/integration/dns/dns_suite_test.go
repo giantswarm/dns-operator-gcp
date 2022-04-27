@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/giantswarm/dns-operator-gcp/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/giantswarm/dns-operator-gcp/tests"
 )
 
 const slowTestThreshold = 30 * time.Second

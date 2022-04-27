@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/controllers/controllersfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,6 +14,9 @@ import (
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/giantswarm/dns-operator-gcp/controllers"
+	"github.com/giantswarm/dns-operator-gcp/controllers/controllersfakes"
 )
 
 var _ = Describe("GCPClusterReconciler", func() {

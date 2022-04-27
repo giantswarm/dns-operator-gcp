@@ -3,8 +3,6 @@ package k8sclient_test
 import (
 	"context"
 
-	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,6 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
+
+	"github.com/giantswarm/dns-operator-gcp/controllers"
+	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
 )
 
 var _ = Describe("GCPCluster", func() {

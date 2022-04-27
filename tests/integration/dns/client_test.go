@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
-	"github.com/giantswarm/dns-operator-gcp/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
-
 	clouddns "google.golang.org/api/dns/v1"
 	"google.golang.org/api/googleapi"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
+
+	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
+	"github.com/giantswarm/dns-operator-gcp/tests"
 )
 
 var _ = Describe("Client", func() {

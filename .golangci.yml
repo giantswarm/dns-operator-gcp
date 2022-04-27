@@ -12,6 +12,11 @@ linters-settings:
     # report about shadowed variables
     check-shadowing: true
 
+  goimports:
+    # Put imports beginning with prefix after 3rd-party packages.
+    # It's a comma-separated list of prefixes.
+    local-prefixes: github.com/giantswarm/dns-operator-gcp
+
 linters:
   # Maximum issues count per one linter. Set to 0 to disable.
   max-per-linter: 0
@@ -21,3 +26,7 @@ linters:
 
   # Show only new issues
   new: false
+
+  # Enabled non-default linters
+  enable:
+    - goimports

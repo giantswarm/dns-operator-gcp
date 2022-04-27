@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/giantswarm/dns-operator-gcp/tests"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,6 +13,8 @@ import (
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/giantswarm/dns-operator-gcp/tests"
 )
 
 var (
