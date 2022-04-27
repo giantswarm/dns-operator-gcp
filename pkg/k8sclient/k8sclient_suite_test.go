@@ -47,10 +47,9 @@ func TestK8s(t *testing.T) {
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	k8sClient    client.Client
-	testEnv      *envtest.Environment
-	namespace    string
-	namespaceObj *corev1.Namespace
+	k8sClient client.Client
+	testEnv   *envtest.Environment
+	namespace string
 )
 
 var _ = BeforeSuite(func() {
@@ -94,11 +93,13 @@ var _ = AfterSuite(func() {
 
 var _ = BeforeEach(func() {
 	namespace = uuid.New().String()
-	namespaceObj = &corev1.Namespace{}
+	namespaceObj := &corev1.Namespace{}
 	namespaceObj.Name = namespace
 	Expect(k8sClient.Create(context.Background(), namespaceObj)).To(Succeed())
 })
 
 var _ = AfterEach(func() {
+	namespaceObj := &corev1.Namespace{}
+	namespaceObj.Name = namespace
 	Expect(k8sClient.Delete(context.Background(), namespaceObj)).To(Succeed())
 })
