@@ -98,3 +98,15 @@ workflows:
             # Trigger the job also on git tag.
             tags:
               only: /^v.*/
+      - architect/push-to-app-collection:
+          context: architect
+          name: push-to-gcp-app-collection
+          app_name: "dns-operator-gcp"
+          app_collection_repo: "gcp-app-collection"
+          requires:
+          - push-to-app-catalog
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
