@@ -134,7 +134,7 @@ var _ = Describe("Client", func() {
 
 			AfterEach(func() {
 				_, err := service.ResourceRecordSets.Delete(gcpProject, clusterName, apiDomain, dns.RecordA).Do()
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).To(Or(Not(HaveOccurred()), BeGoogleAPIErrorWithStatus(http.StatusNotFound)))
 			})
 
 			It("creates the A record", func() {
@@ -143,6 +143,19 @@ var _ = Describe("Client", func() {
 				record, err := service.ResourceRecordSets.Get(gcpProject, clusterName, apiDomain, dns.RecordA).Do()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(record.Rrdatas).To(ConsistOf(controlPlaneEndpoint))
+			})
+
+			When("the cluster does not have a control plane endpoint yet", func() {
+				BeforeEach(func() {
+					cluster.Spec.ControlPlaneEndpoint.Host = ""
+				})
+
+				It("does not create an A record", func() {
+					Expect(createErr).NotTo(HaveOccurred())
+
+					_, err := service.ResourceRecordSets.Get(gcpProject, clusterName, apiDomain, dns.RecordA).Do()
+					Expect(err).To(BeGoogleAPIErrorWithStatus(http.StatusNotFound))
+				})
 			})
 
 			When("the context has been cancelled", func() {

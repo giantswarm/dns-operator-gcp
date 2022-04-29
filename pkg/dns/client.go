@@ -49,6 +49,10 @@ func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error
 }
 
 func (c *Client) CreateARecords(ctx context.Context, cluster *capg.GCPCluster) error {
+	if cluster.Spec.ControlPlaneEndpoint.Host == "" {
+		return nil
+	}
+
 	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, c.baseDomain)
 
 	record := &clouddns.ResourceRecordSet{
