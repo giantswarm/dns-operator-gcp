@@ -7,4 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/giantswarm/dns-operator-gcp/tree/master
+## [0.1.0] - 2022-05-05
+
+[Unreleased]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/giantswarm/dns-operator-gcp/releases/tag/v0.1.0
