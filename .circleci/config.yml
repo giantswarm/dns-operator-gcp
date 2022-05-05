@@ -3,13 +3,6 @@ orbs:
   architect: giantswarm/architect@4.17.0
 
 jobs:
-  lint:
-    executor: architect/architect
-    steps:
-      - checkout
-      - run:
-          name: "Run linter"
-          command: CGO_ENABLED=0 make lint
   unit-tests:
     executor: architect/architect
     steps:
@@ -41,17 +34,24 @@ jobs:
 workflows:
   test-and-push:
     jobs:
-      - lint
-      - unit-tests
-      - integration-tests
-      - acceptance-tests
+      - unit-tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - integration-tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - acceptance-tests:
+          filters:
+            tags:
+              only: /^v.*/
       - architect/go-build:
           context: architect
           name: go-build
           binary: dns-operator-gcp
           resource_class: xlarge
           requires:
-            - lint
             - unit-tests
             - integration-tests
             - acceptance-tests
