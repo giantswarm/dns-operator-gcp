@@ -53,10 +53,11 @@ func (r *GCPClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *GCPClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.logger.WithValues("gcpcluster", req.NamespacedName)
 	gcpCluster, err := r.client.Get(ctx, req.NamespacedName)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			r.logger.Info("GCP Cluster no longer exists")
+			log.Info("GCP Cluster no longer exists")
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, microerror.Mask(err)
@@ -67,12 +68,12 @@ func (r *GCPClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if cluster == nil {
-		r.logger.Info("GCP Cluster does not have an owner cluster yet")
+		log.Info("GCP Cluster does not have an owner cluster yet")
 		return ctrl.Result{}, nil
 	}
 
 	if annotations.IsPaused(cluster, gcpCluster) {
-		r.logger.Info("infrastructure or core cluster is marked as paused. Won't reconcile")
+		log.Info("infrastructure or core cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
