@@ -132,8 +132,8 @@ deploy: manifests render ensure-deploy-envs ## Deploy controller to the K8s clus
 		--set image.tag=$(IMAGE_TAG) \
 		--set gcp.credentials=$(B64_GOOGLE_APPLICATION_CREDENTIALS) \
 		--set baseDomain=$(CLOUD_DNS_BASE_DOMAIN) \
-		--set parentDNSZone=$(CLOUD_DNS_PARENT_ZONE) \
-		--set gcpProject=$(GCP_PROJECT_ID) \
+		--set parentDNSZoneName=$(CLOUD_DNS_PARENT_ZONE) \
+		--set parentDNSZoneProject=$(GCP_PROJECT_ID) \
 		--wait \
 		dns-operator-gcp helm/rendered/dns-operator-gcp
 
