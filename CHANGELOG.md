@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Pass the right parent dns zone name and google project to app deployment.
+
 ## [0.2.0] - 2022-05-05
 
 ## [0.1.0] - 2022-05-05

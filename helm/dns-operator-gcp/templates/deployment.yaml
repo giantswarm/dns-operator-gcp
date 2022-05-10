@@ -34,8 +34,8 @@ spec:
             - /manager
           args:
             - --base-domain={{ .Values.baseDomain }}
-            - --parent-dns-zone={{ .Values.parentDNSZone }}
-            - --gcp-project={{ .Values.gcpProject }}
+            - --parent-dns-zone={{ .Values.parentDNSZoneName }}
+            - --gcp-project={{ .Values.parentDNSZoneProject }}
           resources:
             requests:
               cpu: 100m
