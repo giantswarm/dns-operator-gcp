@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improve logging by adding gcp cluster name being reconciled.
 - Add log to mark start and end of reconcile
+- Use microerror consistently everywhere
 
 ## [0.2.0] - 2022-05-05
 
