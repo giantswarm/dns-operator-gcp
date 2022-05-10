@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Improve logging by adding gcp cluster name being reconciled.
+
 ## [0.2.0] - 2022-05-05
 
 ## [0.1.0] - 2022-05-05
