@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/giantswarm/microerror"
 	clouddns "google.golang.org/api/dns/v1"
 	"google.golang.org/api/googleapi"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
@@ -42,7 +43,7 @@ func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error
 		return nil
 	}
 	if err != nil {
-		return err
+		return microerror.Mask(err)
 	}
 
 	return c.registerNSInParentZone(ctx, domain, zone)
@@ -69,7 +70,7 @@ func (c *Client) CreateARecords(ctx context.Context, cluster *capg.GCPCluster) e
 	if hasHttpCode(err, http.StatusConflict) {
 		return nil
 	}
-	return err
+	return microerror.Mask(err)
 }
 
 func (c *Client) DeleteARecords(ctx context.Context, cluster *capg.GCPCluster) error {
@@ -82,7 +83,7 @@ func (c *Client) DeleteARecords(ctx context.Context, cluster *capg.GCPCluster) e
 		return nil
 	}
 
-	return err
+	return microerror.Mask(err)
 }
 
 func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error {
@@ -93,7 +94,7 @@ func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error
 		Do()
 
 	if err != nil && !hasHttpCode(err, http.StatusNotFound) {
-		return err
+		return microerror.Mask(err)
 	}
 
 	err = c.dnsService.ManagedZones.Delete(cluster.Spec.Project, cluster.Name).
@@ -103,7 +104,7 @@ func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error
 	if hasHttpCode(err, http.StatusNotFound) {
 		return nil
 	}
-	return err
+	return microerror.Mask(err)
 }
 
 func (c *Client) registerNSInParentZone(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
@@ -116,7 +117,7 @@ func (c *Client) registerNSInParentZone(ctx context.Context, domain string, zone
 		Context(ctx).
 		Do()
 
-	return err
+	return microerror.Mask(err)
 }
 
 func (c *Client) createManagedZone(ctx context.Context, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
