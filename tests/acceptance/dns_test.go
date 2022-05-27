@@ -10,10 +10,11 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 
-	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
+	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
 	"github.com/giantswarm/dns-operator-gcp/tests"
 )
 
@@ -30,10 +31,13 @@ var _ = Describe("DNS", func() {
 	)
 
 	BeforeEach(func() {
+		SetDefaultEventuallyPollingInterval(time.Millisecond * 500)
+		SetDefaultEventuallyTimeout(time.Second * 90)
+
 		ctx = context.Background()
 		clusterName = tests.GenerateGUID("test")
 		clusterDomain = fmt.Sprintf("%s.%s.", clusterName, baseDomain)
-		apiDomain = fmt.Sprintf("%s.%s", dns.EndpointAPI, clusterDomain)
+		apiDomain = fmt.Sprintf("%s.%s", registrar.EndpointAPI, clusterDomain)
 
 		resolver = &net.Resolver{
 			PreferGo: true,
@@ -82,7 +86,7 @@ var _ = Describe("DNS", func() {
 			var err error
 			records, err = resolver.LookupNS(ctx, clusterDomain)
 			return err
-		}, "1m", "500ms").Should(Succeed())
+		}).Should(Succeed())
 
 		Expect(records).ToNot(BeEmpty())
 	})
@@ -93,7 +97,7 @@ var _ = Describe("DNS", func() {
 			var err error
 			records, err = resolver.LookupIP(ctx, "ip", apiDomain)
 			return err
-		}, "1m", "500ms").Should(Succeed())
+		}).Should(Succeed())
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("10.0.0.1"))
@@ -104,17 +108,28 @@ var _ = Describe("DNS", func() {
 			Eventually(func() error {
 				_, err := resolver.LookupNS(ctx, clusterDomain)
 				return err
-			}, "1m", "500ms").Should(Succeed())
+			}).Should(Succeed())
 
 			Expect(k8sClient.Delete(ctx, gcpCluster)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, cluster)).To(Succeed())
+		})
+
+		It("does not prevent the cluster deletion", func() {
+			nsName := types.NamespacedName{
+				Name:      gcpCluster.Name,
+				Namespace: gcpCluster.Namespace,
+			}
+
+			Eventually(func() error {
+				return k8sClient.Get(ctx, nsName, &capg.GCPCluster{})
+			}).ShouldNot(Succeed())
 		})
 
 		It("removes the ns record", func() {
 			Eventually(func() error {
 				_, err := resolver.LookupNS(ctx, clusterDomain)
 				return err
-			}, "1m", "500ms").ShouldNot(Succeed())
+			}).ShouldNot(Succeed())
 		})
 
 		It("removes the A record", func() {
@@ -122,7 +137,7 @@ var _ = Describe("DNS", func() {
 				var err error
 				_, err = resolver.LookupIP(ctx, "ip", apiDomain)
 				return err
-			}, "1m", "500ms").ShouldNot(Succeed())
+			}).ShouldNot(Succeed())
 		})
 	})
 })

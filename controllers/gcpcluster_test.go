@@ -25,7 +25,9 @@ var _ = Describe("GCPClusterReconciler", func() {
 
 		reconciler *controllers.GCPClusterReconciler
 		client     *controllersfakes.FakeGCPClusterClient
-		dnsClient  *controllersfakes.FakeCloudDNSClient
+
+		firstRegistrar  *controllersfakes.FakeRegistrar
+		secondRegistrar *controllersfakes.FakeRegistrar
 
 		cluster      *capi.Cluster
 		gcpCluster   *capg.GCPCluster
@@ -37,11 +39,13 @@ var _ = Describe("GCPClusterReconciler", func() {
 		ctx = context.Background()
 
 		client = new(controllersfakes.FakeGCPClusterClient)
-		dnsClient = new(controllersfakes.FakeCloudDNSClient)
+		firstRegistrar = new(controllersfakes.FakeRegistrar)
+		secondRegistrar = new(controllersfakes.FakeRegistrar)
+
 		reconciler = controllers.NewGCPClusterReconciler(
 			zap.New(zap.WriteTo(GinkgoWriter)),
 			client,
-			dnsClient,
+			[]controllers.Registrar{firstRegistrar, secondRegistrar},
 		)
 
 		gcpCluster = &capg.GCPCluster{}
@@ -79,18 +83,14 @@ var _ = Describe("GCPClusterReconciler", func() {
 		Expect(finalizer).To(Equal(controllers.FinalizerDNS))
 	})
 
-	It("creates the dns zone", func() {
-		Expect(dnsClient.CreateZoneCallCount()).To(Equal(1))
-
-		actualContext, actualCluster := dnsClient.CreateZoneArgsForCall(0)
+	It("uses the registrars to register the records", func() {
+		Expect(firstRegistrar.RegisterCallCount()).To(Equal(1))
+		actualContext, actualCluster := firstRegistrar.RegisterArgsForCall(0)
 		Expect(actualContext).To(Equal(ctx))
 		Expect(actualCluster).To(Equal(gcpCluster))
-	})
 
-	It("creates the A records", func() {
-		Expect(dnsClient.CreateARecordsCallCount()).To(Equal(1))
-
-		actualContext, actualCluster := dnsClient.CreateARecordsArgsForCall(0)
+		Expect(secondRegistrar.RegisterCallCount()).To(Equal(1))
+		actualContext, actualCluster = secondRegistrar.RegisterArgsForCall(0)
 		Expect(actualContext).To(Equal(ctx))
 		Expect(actualCluster).To(Equal(gcpCluster))
 	})
@@ -109,43 +109,26 @@ var _ = Describe("GCPClusterReconciler", func() {
 			Expect(finalizer).To(Equal(controllers.FinalizerDNS))
 		})
 
-		It("deletes the A records", func() {
-			Expect(dnsClient.DeleteARecordsCallCount()).To(Equal(1))
+		It("uses the registrars to unregister the records", func() {
+			Expect(firstRegistrar.UnregisterCallCount()).To(Equal(1))
+			actualContext, actualCluster := firstRegistrar.UnregisterArgsForCall(0)
+			Expect(actualContext).To(Equal(ctx))
+			Expect(actualCluster).To(Equal(gcpCluster))
 
-			actualContext, actualCluster := dnsClient.DeleteARecordsArgsForCall(0)
+			Expect(secondRegistrar.UnregisterCallCount()).To(Equal(1))
+			actualContext, actualCluster = secondRegistrar.UnregisterArgsForCall(0)
 			Expect(actualContext).To(Equal(ctx))
 			Expect(actualCluster).To(Equal(gcpCluster))
 		})
 
-		It("deletes the dns zone", func() {
-			Expect(dnsClient.DeleteZoneCallCount()).To(Equal(1))
-
-			actualContext, actualCluster := dnsClient.DeleteZoneArgsForCall(0)
-			Expect(actualContext).To(Equal(ctx))
-			Expect(actualCluster).To(Equal(gcpCluster))
-		})
-
-		When("deleting the dns zone fails", func() {
+		When("a registrar fails to unregister ", func() {
 			BeforeEach(func() {
-				dnsClient.DeleteZoneReturns(errors.New("boom"))
+				secondRegistrar.UnregisterReturns(errors.New("boom"))
 			})
 
-			It("returns an error", func() {
+			It("does not reconcile", func() {
 				Expect(reconcileErr).To(HaveOccurred())
-			})
-
-			It("does not remove the finalizer", func() {
-				Expect(client.RemoveFinalizerCallCount()).To(Equal(0))
-			})
-		})
-
-		When("deleting the A records fails", func() {
-			BeforeEach(func() {
-				dnsClient.DeleteARecordsReturns(errors.New("boom"))
-			})
-
-			It("returns an error", func() {
-				Expect(reconcileErr).To(HaveOccurred())
+				Expect(firstRegistrar.UnregisterCallCount()).To(Equal(0))
 			})
 
 			It("does not remove the finalizer", func() {
@@ -246,23 +229,14 @@ var _ = Describe("GCPClusterReconciler", func() {
 		})
 	})
 
-	When("creating DNS zone fails", func() {
+	When("a registrar fails", func() {
 		BeforeEach(func() {
-			dnsClient.CreateZoneReturns(errors.New("boom"))
+			firstRegistrar.RegisterReturns(errors.New("boom"))
 		})
 
 		It("does not reconcile", func() {
 			Expect(reconcileErr).To(MatchError(ContainSubstring("boom")))
-		})
-	})
-
-	When("creating A records fails", func() {
-		BeforeEach(func() {
-			dnsClient.CreateARecordsReturns(errors.New("boom"))
-		})
-
-		It("does not reconcile", func() {
-			Expect(reconcileErr).To(MatchError(ContainSubstring("boom")))
+			Expect(secondRegistrar.RegisterCallCount()).To(Equal(0))
 		})
 	})
 })

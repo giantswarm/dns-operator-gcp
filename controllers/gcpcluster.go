@@ -23,25 +23,23 @@ type GCPClusterClient interface {
 	RemoveFinalizer(context.Context, *capg.GCPCluster, string) error
 }
 
-//counterfeiter:generate . CloudDNSClient
-type CloudDNSClient interface {
-	CreateZone(context.Context, *capg.GCPCluster) error
-	CreateARecords(context.Context, *capg.GCPCluster) error
-	DeleteARecords(context.Context, *capg.GCPCluster) error
-	DeleteZone(context.Context, *capg.GCPCluster) error
+//counterfeiter:generate . Registrar
+type Registrar interface {
+	Register(context.Context, *capg.GCPCluster) error
+	Unregister(context.Context, *capg.GCPCluster) error
 }
 
 type GCPClusterReconciler struct {
-	logger    logr.Logger
-	client    GCPClusterClient
-	dnsClient CloudDNSClient
+	logger     logr.Logger
+	client     GCPClusterClient
+	registrars []Registrar
 }
 
-func NewGCPClusterReconciler(logger logr.Logger, client GCPClusterClient, dnsClient CloudDNSClient) *GCPClusterReconciler {
+func NewGCPClusterReconciler(logger logr.Logger, client GCPClusterClient, registrars []Registrar) *GCPClusterReconciler {
 	return &GCPClusterReconciler{
-		logger:    logger,
-		client:    client,
-		dnsClient: dnsClient,
+		logger:     logger,
+		client:     client,
+		registrars: registrars,
 	}
 }
 
@@ -94,31 +92,27 @@ func (r *GCPClusterReconciler) reconcileNormal(ctx context.Context, gcpCluster *
 		return ctrl.Result{}, microerror.Mask(err)
 	}
 
-	err = r.dnsClient.CreateZone(ctx, gcpCluster)
-	if err != nil {
-		return ctrl.Result{}, microerror.Mask(err)
-	}
-
-	err = r.dnsClient.CreateARecords(ctx, gcpCluster)
-	if err != nil {
-		return ctrl.Result{}, microerror.Mask(err)
+	for _, registrar := range r.registrars {
+		err = registrar.Register(ctx, gcpCluster)
+		if err != nil {
+			return ctrl.Result{}, microerror.Mask(err)
+		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
 func (r *GCPClusterReconciler) reconcileDelete(ctx context.Context, gcpCluster *capg.GCPCluster) (ctrl.Result, error) {
-	err := r.dnsClient.DeleteARecords(ctx, gcpCluster)
-	if err != nil {
-		return ctrl.Result{}, microerror.Mask(err)
+	for i := range r.registrars {
+		registrar := r.registrars[len(r.registrars)-1-i]
+
+		err := registrar.Unregister(ctx, gcpCluster)
+		if err != nil {
+			return ctrl.Result{}, microerror.Mask(err)
+		}
 	}
 
-	err = r.dnsClient.DeleteZone(ctx, gcpCluster)
-	if err != nil {
-		return ctrl.Result{}, microerror.Mask(err)
-	}
-
-	err = r.client.RemoveFinalizer(ctx, gcpCluster, FinalizerDNS)
+	err := r.client.RemoveFinalizer(ctx, gcpCluster, FinalizerDNS)
 	if err != nil {
 		return ctrl.Result{}, microerror.Mask(err)
 	}

@@ -35,8 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
 	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
+	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -102,8 +102,13 @@ func main() {
 	}
 
 	client := k8sclient.NewGCPCluster(mgr.GetClient())
-	dnsClient := dns.NewClient(baseDomain, parentDNSZone, gcpProject, service)
-	controller := controllers.NewGCPClusterReconciler(mgr.GetLogger(), client, dnsClient)
+	zoneRegistrar := registrar.NewZone(baseDomain, parentDNSZone, gcpProject, service)
+	apiRegistrar := registrar.NewAPI(baseDomain, service)
+	registrars := []controllers.Registrar{
+		zoneRegistrar,
+		apiRegistrar,
+	}
+	controller := controllers.NewGCPClusterReconciler(mgr.GetLogger(), client, registrars)
 	err = controller.SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "failed to setup controller", "controller", "GCPCluster")

@@ -1,4 +1,4 @@
-package dns
+package registrar
 
 import (
 	"context"
@@ -19,7 +19,7 @@ const (
 	EndpointAPI = "api"
 )
 
-type Client struct {
+type Zone struct {
 	dnsService *clouddns.Service
 
 	baseDomain       string
@@ -27,8 +27,8 @@ type Client struct {
 	parentGCPProject string
 }
 
-func NewClient(baseDomain, parentDNSZone, parentGCPProject string, dnsService *clouddns.Service) *Client {
-	return &Client{
+func NewZone(baseDomain, parentDNSZone, parentGCPProject string, dnsService *clouddns.Service) *Zone {
+	return &Zone{
 		baseDomain:       baseDomain,
 		parentDNSZone:    parentDNSZone,
 		parentGCPProject: parentGCPProject,
@@ -36,7 +36,7 @@ func NewClient(baseDomain, parentDNSZone, parentGCPProject string, dnsService *c
 	}
 }
 
-func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error {
+func (c *Zone) Register(ctx context.Context, cluster *capg.GCPCluster) error {
 	domain := c.getClusterDomain(cluster)
 	zone, err := c.createManagedZone(ctx, domain, cluster)
 	if hasHttpCode(err, http.StatusConflict) {
@@ -49,44 +49,7 @@ func (c *Client) CreateZone(ctx context.Context, cluster *capg.GCPCluster) error
 	return c.registerNSInParentZone(ctx, domain, zone)
 }
 
-func (c *Client) CreateARecords(ctx context.Context, cluster *capg.GCPCluster) error {
-	if cluster.Spec.ControlPlaneEndpoint.Host == "" {
-		return nil
-	}
-
-	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, c.baseDomain)
-
-	record := &clouddns.ResourceRecordSet{
-		Name: apiDomain,
-		Rrdatas: []string{
-			cluster.Spec.ControlPlaneEndpoint.Host,
-		},
-		Type: RecordA,
-	}
-	_, err := c.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
-		Context(ctx).
-		Do()
-
-	if hasHttpCode(err, http.StatusConflict) {
-		return nil
-	}
-	return microerror.Mask(err)
-}
-
-func (c *Client) DeleteARecords(ctx context.Context, cluster *capg.GCPCluster) error {
-	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, c.baseDomain)
-	_, err := c.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, apiDomain, RecordA).
-		Context(ctx).
-		Do()
-
-	if hasHttpCode(err, http.StatusNotFound) {
-		return nil
-	}
-
-	return microerror.Mask(err)
-}
-
-func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error {
+func (c *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
 	domain := c.getClusterDomain(cluster)
 
 	_, err := c.dnsService.ResourceRecordSets.Delete(c.parentGCPProject, c.parentDNSZone, domain, RecordNS).
@@ -107,7 +70,7 @@ func (c *Client) DeleteZone(ctx context.Context, cluster *capg.GCPCluster) error
 	return microerror.Mask(err)
 }
 
-func (c *Client) registerNSInParentZone(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
+func (c *Zone) registerNSInParentZone(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
 	nsRecord := &clouddns.ResourceRecordSet{
 		Name:    domain,
 		Rrdatas: zone.NameServers,
@@ -120,7 +83,7 @@ func (c *Client) registerNSInParentZone(ctx context.Context, domain string, zone
 	return microerror.Mask(err)
 }
 
-func (c *Client) createManagedZone(ctx context.Context, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
+func (c *Zone) createManagedZone(ctx context.Context, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
 	zone := &clouddns.ManagedZone{
 		Name:        cluster.Name,
 		DnsName:     domain,
@@ -137,7 +100,7 @@ func (c *Client) createManagedZone(ctx context.Context, domain string, cluster *
 	return zone, err
 }
 
-func (c *Client) getClusterDomain(cluster *capg.GCPCluster) string {
+func (c *Zone) getClusterDomain(cluster *capg.GCPCluster) string {
 	return fmt.Sprintf("%s.%s.", cluster.Name, c.baseDomain)
 }
 
