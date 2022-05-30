@@ -10,11 +10,11 @@ import (
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 )
 
-type API struct {
-	dnsService *clouddns.Service
+const EndpointAPI = "api"
 
-	baseDomain       string
-	parentGCPProject string
+type API struct {
+	baseDomain string
+	dnsService *clouddns.Service
 }
 
 func NewAPI(baseDomain string, dnsService *clouddns.Service) *API {

@@ -20,7 +20,7 @@ var _ = Describe("Service", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		client = k8sclient.NewService(k8sClient)
+		client = k8sclient.NewService(namespace, k8sClient)
 	})
 
 	Describe("GetByLabel", func() {

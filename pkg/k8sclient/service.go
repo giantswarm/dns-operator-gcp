@@ -10,10 +10,11 @@ import (
 )
 
 type Service struct {
-	client client.Client
+	namespace string
+	client    client.Client
 }
 
-func NewService(client client.Client) *Service {
+func NewService(namespace string, client client.Client) *Service {
 	return &Service{
 		client: client,
 	}
@@ -21,7 +22,12 @@ func NewService(client client.Client) *Service {
 
 func (s *Service) GetByLabel(ctx context.Context, labelKey, labelValue string) (corev1.Service, error) {
 	serviceList := &corev1.ServiceList{}
-	err := s.client.List(ctx, serviceList, client.MatchingLabels{labelKey: labelValue})
+	err := s.client.List(
+		ctx,
+		serviceList,
+		client.InNamespace(s.namespace),
+		client.MatchingLabels{labelKey: labelValue},
+	)
 	if err != nil {
 		return corev1.Service{}, microerror.Mask(err)
 	}

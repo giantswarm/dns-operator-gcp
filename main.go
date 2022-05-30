@@ -101,12 +101,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := k8sclient.NewGCPCluster(mgr.GetClient())
+	runtimeClient := mgr.GetClient()
+	client := k8sclient.NewGCPCluster(runtimeClient)
+	serviceClient := k8sclient.NewService(registrar.IngressNamespace, runtimeClient)
 	zoneRegistrar := registrar.NewZone(baseDomain, parentDNSZone, gcpProject, service)
 	apiRegistrar := registrar.NewAPI(baseDomain, service)
+	ingressRegistrar := registrar.NewIngress(baseDomain, service, serviceClient)
 	registrars := []controllers.Registrar{
 		zoneRegistrar,
 		apiRegistrar,
+		ingressRegistrar,
 	}
 	controller := controllers.NewGCPClusterReconciler(mgr.GetLogger(), client, registrars)
 	err = controller.SetupWithManager(mgr)

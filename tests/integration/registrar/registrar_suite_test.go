@@ -23,12 +23,12 @@ var (
 	gcpProject    string
 )
 
-func TestDns(t *testing.T) {
+func TestRegistrar(t *testing.T) {
 	suiteConfig, reporterConfig := GinkgoConfiguration()
 	reporterConfig.SlowSpecThreshold = slowTestThreshold
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Dns Suite", suiteConfig, reporterConfig)
+	RunSpecs(t, "Registrar Suite", suiteConfig, reporterConfig)
 }
 
 var _ = BeforeSuite(func() {

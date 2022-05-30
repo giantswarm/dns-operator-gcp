@@ -2,21 +2,17 @@ package registrar
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/giantswarm/microerror"
 	clouddns "google.golang.org/api/dns/v1"
-	"google.golang.org/api/googleapi"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 )
 
 const (
 	RecordNS = "NS"
 	RecordA  = "A"
-
-	EndpointAPI = "api"
 )
 
 type Zone struct {
@@ -102,15 +98,4 @@ func (c *Zone) createManagedZone(ctx context.Context, domain string, cluster *ca
 
 func (c *Zone) getClusterDomain(cluster *capg.GCPCluster) string {
 	return fmt.Sprintf("%s.%s.", cluster.Name, c.baseDomain)
-}
-
-func hasHttpCode(err error, statusCode int) bool {
-	var googleErr *googleapi.Error
-	if errors.As(err, &googleErr) {
-		if googleErr.Code == statusCode {
-			return true
-		}
-	}
-
-	return false
 }
