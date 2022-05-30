@@ -107,10 +107,12 @@ func main() {
 	zoneRegistrar := registrar.NewZone(baseDomain, parentDNSZone, gcpProject, service)
 	apiRegistrar := registrar.NewAPI(baseDomain, service)
 	ingressRegistrar := registrar.NewIngress(baseDomain, service, serviceClient)
+	wildcardRegistrar := registrar.NewWildcard(baseDomain, service)
 	registrars := []controllers.Registrar{
 		zoneRegistrar,
 		apiRegistrar,
 		ingressRegistrar,
+		wildcardRegistrar,
 	}
 	controller := controllers.NewGCPClusterReconciler(mgr.GetLogger(), client, registrars)
 	err = controller.SetupWithManager(mgr)

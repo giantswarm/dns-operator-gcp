@@ -10,11 +10,6 @@ import (
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 )
 
-const (
-	RecordNS = "NS"
-	RecordA  = "A"
-)
-
 type Zone struct {
 	dnsService *clouddns.Service
 

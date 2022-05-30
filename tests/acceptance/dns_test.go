@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -43,6 +44,8 @@ var _ = Describe("DNS", func() {
 		ingressDomain = fmt.Sprintf("%s.%s", registrar.EndpointIngress, clusterDomain)
 
 		resolver = &net.Resolver{
+			PreferGo:     true,
+			StrictErrors: true,
 			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 				d := net.Dialer{
 					Timeout: time.Millisecond * time.Duration(10000),
@@ -143,6 +146,27 @@ var _ = Describe("DNS", func() {
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("10.0.0.2"))
+	})
+
+	It("creates a CNAME record for the wildcard domain", func() {
+		wildcardDomain := fmt.Sprintf("%s.%s", uuid.NewString(), clusterDomain)
+		var record string
+		Eventually(func() error {
+			var err error
+			record, err = resolver.LookupCNAME(ctx, wildcardDomain)
+			return err
+		}).Should(Succeed())
+
+		Expect(record).To(Equal(ingressDomain))
+
+		var records []string
+		Eventually(func() error {
+			var err error
+			records, err = resolver.LookupHost(ctx, wildcardDomain)
+			return err
+		}).Should(Succeed())
+
+		Expect(records).To(ConsistOf("10.0.0.2"))
 	})
 
 	When("the cluster is deleted", func() {
