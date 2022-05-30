@@ -99,7 +99,7 @@ test-integration: ginkgo ensure-gcp-envs ## Run integration tests
 
 .PHONY: test-acceptance
 test-acceptance: ginkgo ensure-gcp-envs deploy-acceptance-cluster ## Run acceptance testst
-	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" $(GINKGO) -p -r -randomize-all --randomize-suites tests/acceptance
+	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" $(GINKGO) -p -nodes 2 -r -randomize-all --randomize-suites tests/acceptance
 
 .PHONY: test-all
 test-all: lint test-unit test-integration test-acceptance ## Run all tests and litner
