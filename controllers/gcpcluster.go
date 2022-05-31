@@ -50,8 +50,6 @@ func (r *GCPClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *GCPClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-	logger = logger.WithValues("gcpcluster", req.NamespacedName)
-	ctx = log.IntoContext(ctx, logger)
 
 	logger.Info("Reconciling")
 	defer logger.Info("Done reconciling")
