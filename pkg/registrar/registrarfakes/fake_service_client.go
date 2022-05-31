@@ -5,8 +5,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
 	v1 "k8s.io/api/core/v1"
+
+	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
 )
 
 type FakeServiceClient struct {
