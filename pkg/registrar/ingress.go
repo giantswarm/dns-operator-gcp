@@ -69,11 +69,11 @@ func (i *Ingress) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 		Context(ctx).
 		Do()
 
-	if hasHttpCode(err, http.StatusNotFound) {
+	if hasHttpCode(err, http.StatusConflict) {
 		return nil
 	}
 
-	return nil
+	return microerror.Mask(err)
 }
 
 func (i *Ingress) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
