@@ -110,7 +110,9 @@ var _ = Describe("DNS", func() {
 				},
 			},
 		}
-		k8sClient.Status().Patch(ctx, patchedService, client.MergeFrom(service))
+
+		err := k8sClient.Status().Patch(ctx, patchedService, client.MergeFrom(service))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("creates an NS record for the cluster", func() {

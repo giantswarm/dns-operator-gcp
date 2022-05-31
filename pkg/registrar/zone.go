@@ -27,23 +27,20 @@ func NewZone(baseDomain, parentDNSZone, parentGCPProject string, dnsService *clo
 	}
 }
 
-func (c *Zone) Register(ctx context.Context, cluster *capg.GCPCluster) error {
-	domain := c.getClusterDomain(cluster)
-	zone, err := c.createManagedZone(ctx, domain, cluster)
-	if hasHttpCode(err, http.StatusConflict) {
-		return nil
-	}
+func (r *Zone) Register(ctx context.Context, cluster *capg.GCPCluster) error {
+	domain := r.getClusterDomain(cluster)
+	zone, err := r.createManagedZone(ctx, domain, cluster)
 	if err != nil {
 		return microerror.Mask(err)
 	}
 
-	return c.registerNSInParentZone(ctx, domain, zone)
+	return r.registerNSInParentZone(ctx, domain, zone)
 }
 
-func (c *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
-	domain := c.getClusterDomain(cluster)
+func (r *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
+	domain := r.getClusterDomain(cluster)
 
-	_, err := c.dnsService.ResourceRecordSets.Delete(c.parentGCPProject, c.parentDNSZone, domain, RecordNS).
+	_, err := r.dnsService.ResourceRecordSets.Delete(r.parentGCPProject, r.parentDNSZone, domain, RecordNS).
 		Context(ctx).
 		Do()
 
@@ -51,7 +48,7 @@ func (c *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
 		return microerror.Mask(err)
 	}
 
-	err = c.dnsService.ManagedZones.Delete(cluster.Spec.Project, cluster.Name).
+	err = r.dnsService.ManagedZones.Delete(cluster.Spec.Project, cluster.Name).
 		Context(ctx).
 		Do()
 
@@ -61,29 +58,38 @@ func (c *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
 	return microerror.Mask(err)
 }
 
-func (c *Zone) registerNSInParentZone(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
+func (r *Zone) registerNSInParentZone(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
 	nsRecord := &clouddns.ResourceRecordSet{
 		Name:    domain,
 		Rrdatas: zone.NameServers,
 		Type:    RecordNS,
 	}
-	_, err := c.dnsService.ResourceRecordSets.Create(c.parentGCPProject, c.parentDNSZone, nsRecord).
+	_, err := r.dnsService.ResourceRecordSets.Create(r.parentGCPProject, r.parentDNSZone, nsRecord).
 		Context(ctx).
 		Do()
+
+	if hasHttpCode(err, http.StatusConflict) {
+		return nil
+	}
 
 	return microerror.Mask(err)
 }
 
-func (c *Zone) createManagedZone(ctx context.Context, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
+func (r *Zone) createManagedZone(ctx context.Context, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
 	zone := &clouddns.ManagedZone{
 		Name:        cluster.Name,
 		DnsName:     domain,
 		Description: "DNS zone for WC cluster, managed by GCP DNS operator.",
 		Visibility:  "public",
 	}
-	zone, err := c.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
+	zone, err := r.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
 		Context(ctx).
 		Do()
+
+	if hasHttpCode(err, http.StatusConflict) {
+		return r.getManagedZone(ctx, cluster)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +97,12 @@ func (c *Zone) createManagedZone(ctx context.Context, domain string, cluster *ca
 	return zone, err
 }
 
-func (c *Zone) getClusterDomain(cluster *capg.GCPCluster) string {
-	return fmt.Sprintf("%s.%s.", cluster.Name, c.baseDomain)
+func (r *Zone) getManagedZone(ctx context.Context, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
+	return r.dnsService.ManagedZones.Get(cluster.Spec.Project, cluster.Name).
+		Context(ctx).
+		Do()
+}
+
+func (r *Zone) getClusterDomain(cluster *capg.GCPCluster) string {
+	return fmt.Sprintf("%s.%s.", cluster.Name, r.baseDomain)
 }
