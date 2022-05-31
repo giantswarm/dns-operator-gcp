@@ -33,7 +33,7 @@ func (s *Service) GetByLabel(ctx context.Context, labelKey, labelValue string) (
 	}
 
 	if len(serviceList.Items) != 1 {
-		return corev1.Service{}, fmt.Errorf("found %d matching services, expected 1", len(serviceList.Items))
+		return corev1.Service{}, fmt.Errorf("found %d services matching label %q: %q, expected 1", len(serviceList.Items), labelKey, labelValue)
 	}
 
 	return serviceList.Items[0], nil

@@ -13,6 +13,7 @@ import (
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/giantswarm/dns-operator-gcp/controllers"
@@ -36,14 +37,14 @@ var _ = Describe("GCPClusterReconciler", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
+		logger := zap.New(zap.WriteTo(GinkgoWriter))
+		ctx = log.IntoContext(context.Background(), logger)
 
 		client = new(controllersfakes.FakeGCPClusterClient)
 		firstRegistrar = new(controllersfakes.FakeRegistrar)
 		secondRegistrar = new(controllersfakes.FakeRegistrar)
 
 		reconciler = controllers.NewGCPClusterReconciler(
-			zap.New(zap.WriteTo(GinkgoWriter)),
 			client,
 			[]controllers.Registrar{firstRegistrar, secondRegistrar},
 		)
@@ -69,29 +70,25 @@ var _ = Describe("GCPClusterReconciler", func() {
 		Expect(client.GetCallCount()).To(Equal(1))
 		Expect(client.GetOwnerCallCount()).To(Equal(1))
 
-		actualCtx, actualCluster := client.GetOwnerArgsForCall(0)
-		Expect(actualCtx).To(Equal(ctx))
+		_, actualCluster := client.GetOwnerArgsForCall(0)
 		Expect(actualCluster).To(Equal(gcpCluster))
 	})
 
 	It("adds a finalizer to the gcp cluster", func() {
 		Expect(client.AddFinalizerCallCount()).To(Equal(1))
 
-		actualContext, actualCluster, finalizer := client.AddFinalizerArgsForCall(0)
-		Expect(actualContext).To(Equal(ctx))
+		_, actualCluster, finalizer := client.AddFinalizerArgsForCall(0)
 		Expect(actualCluster).To(Equal(gcpCluster))
 		Expect(finalizer).To(Equal(controllers.FinalizerDNS))
 	})
 
 	It("uses the registrars to register the records", func() {
 		Expect(firstRegistrar.RegisterCallCount()).To(Equal(1))
-		actualContext, actualCluster := firstRegistrar.RegisterArgsForCall(0)
-		Expect(actualContext).To(Equal(ctx))
+		_, actualCluster := firstRegistrar.RegisterArgsForCall(0)
 		Expect(actualCluster).To(Equal(gcpCluster))
 
 		Expect(secondRegistrar.RegisterCallCount()).To(Equal(1))
-		actualContext, actualCluster = secondRegistrar.RegisterArgsForCall(0)
-		Expect(actualContext).To(Equal(ctx))
+		_, actualCluster = secondRegistrar.RegisterArgsForCall(0)
 		Expect(actualCluster).To(Equal(gcpCluster))
 	})
 
@@ -103,21 +100,18 @@ var _ = Describe("GCPClusterReconciler", func() {
 
 		It("removes the finalizer", func() {
 			Expect(client.RemoveFinalizerCallCount()).To(Equal(1))
-			actualContext, actualCluster, finalizer := client.RemoveFinalizerArgsForCall(0)
-			Expect(actualContext).To(Equal(ctx))
+			_, actualCluster, finalizer := client.RemoveFinalizerArgsForCall(0)
 			Expect(actualCluster).To(Equal(gcpCluster))
 			Expect(finalizer).To(Equal(controllers.FinalizerDNS))
 		})
 
 		It("uses the registrars to unregister the records", func() {
 			Expect(firstRegistrar.UnregisterCallCount()).To(Equal(1))
-			actualContext, actualCluster := firstRegistrar.UnregisterArgsForCall(0)
-			Expect(actualContext).To(Equal(ctx))
+			_, actualCluster := firstRegistrar.UnregisterArgsForCall(0)
 			Expect(actualCluster).To(Equal(gcpCluster))
 
 			Expect(secondRegistrar.UnregisterCallCount()).To(Equal(1))
-			actualContext, actualCluster = secondRegistrar.UnregisterArgsForCall(0)
-			Expect(actualContext).To(Equal(ctx))
+			_, actualCluster = secondRegistrar.UnregisterArgsForCall(0)
 			Expect(actualCluster).To(Equal(gcpCluster))
 		})
 

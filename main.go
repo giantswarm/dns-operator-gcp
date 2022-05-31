@@ -114,7 +114,7 @@ func main() {
 		ingressRegistrar,
 		wildcardRegistrar,
 	}
-	controller := controllers.NewGCPClusterReconciler(mgr.GetLogger(), client, registrars)
+	controller := controllers.NewGCPClusterReconciler(client, registrars)
 	err = controller.SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "failed to setup controller", "controller", "GCPCluster")

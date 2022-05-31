@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"github.com/giantswarm/microerror"
+	"github.com/go-logr/logr"
 	clouddns "google.golang.org/api/dns/v1"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type Zone struct {
@@ -28,16 +30,27 @@ func NewZone(baseDomain, parentDNSZone, parentGCPProject string, dnsService *clo
 }
 
 func (r *Zone) Register(ctx context.Context, cluster *capg.GCPCluster) error {
+	logger := r.getLogger(ctx)
+
+	logger.Info("Registering record")
+	defer logger.Info("Done registering record")
+
 	domain := r.getClusterDomain(cluster)
-	zone, err := r.createManagedZone(ctx, domain, cluster)
+	zone, err := r.createManagedZone(ctx, logger, domain, cluster)
 	if err != nil {
+		logger.Error(err, "Failed to register managed zone")
 		return microerror.Mask(err)
 	}
 
-	return r.registerNSInParentZone(ctx, domain, zone)
+	return r.registerNSInParentZone(ctx, logger, domain, zone)
 }
 
 func (r *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
+	logger := r.getLogger(ctx)
+
+	logger.Info("Registering record")
+	defer logger.Info("Done registering record")
+
 	domain := r.getClusterDomain(cluster)
 
 	_, err := r.dnsService.ResourceRecordSets.Delete(r.parentGCPProject, r.parentDNSZone, domain, RecordNS).
@@ -45,6 +58,7 @@ func (r *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
 		Do()
 
 	if err != nil && !hasHttpCode(err, http.StatusNotFound) {
+		logger.Info("Skipping. Record already unregistered")
 		return microerror.Mask(err)
 	}
 
@@ -53,12 +67,13 @@ func (r *Zone) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
 		Do()
 
 	if hasHttpCode(err, http.StatusNotFound) {
+		logger.Info("Zone already deleted")
 		return nil
 	}
 	return microerror.Mask(err)
 }
 
-func (r *Zone) registerNSInParentZone(ctx context.Context, domain string, zone *clouddns.ManagedZone) error {
+func (r *Zone) registerNSInParentZone(ctx context.Context, logger logr.Logger, domain string, zone *clouddns.ManagedZone) error {
 	nsRecord := &clouddns.ResourceRecordSet{
 		Name:    domain,
 		Rrdatas: zone.NameServers,
@@ -69,17 +84,18 @@ func (r *Zone) registerNSInParentZone(ctx context.Context, domain string, zone *
 		Do()
 
 	if hasHttpCode(err, http.StatusConflict) {
+		logger.Info("Skipping. Record already exists")
 		return nil
 	}
 
 	return microerror.Mask(err)
 }
 
-func (r *Zone) createManagedZone(ctx context.Context, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
+func (r *Zone) createManagedZone(ctx context.Context, logger logr.Logger, domain string, cluster *capg.GCPCluster) (*clouddns.ManagedZone, error) {
 	zone := &clouddns.ManagedZone{
 		Name:        cluster.Name,
 		DnsName:     domain,
-		Description: "DNS zone for WC cluster, managed by GCP DNS operator.",
+		Description: "DNS zone for cluster, managed by GCP DNS operator.",
 		Visibility:  "public",
 	}
 	zone, err := r.dnsService.ManagedZones.Create(cluster.Spec.Project, zone).
@@ -87,6 +103,7 @@ func (r *Zone) createManagedZone(ctx context.Context, domain string, cluster *ca
 		Do()
 
 	if hasHttpCode(err, http.StatusConflict) {
+		logger.Info("Getting existing zone")
 		return r.getManagedZone(ctx, cluster)
 	}
 
@@ -105,4 +122,9 @@ func (r *Zone) getManagedZone(ctx context.Context, cluster *capg.GCPCluster) (*c
 
 func (r *Zone) getClusterDomain(cluster *capg.GCPCluster) string {
 	return fmt.Sprintf("%s.%s.", cluster.Name, r.baseDomain)
+}
+
+func (r *Zone) getLogger(ctx context.Context) logr.Logger {
+	logger := log.FromContext(ctx)
+	return logger.WithName("wildcard-registrar")
 }

@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"github.com/giantswarm/microerror"
+	"github.com/go-logr/logr"
 	clouddns "google.golang.org/api/dns/v1"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const EndpointAPI = "api"
@@ -24,12 +26,18 @@ func NewAPI(baseDomain string, dnsService *clouddns.Service) *API {
 	}
 }
 
-func (c *API) Register(ctx context.Context, cluster *capg.GCPCluster) error {
+func (r *API) Register(ctx context.Context, cluster *capg.GCPCluster) error {
+	logger := r.getLogger(ctx)
+
+	logger.Info("Registering record")
+	defer logger.Info("Done registering record")
+
 	if cluster.Spec.ControlPlaneEndpoint.Host == "" {
+		logger.Info("Skipping. Cluster does not have controplane endpoint yet")
 		return nil
 	}
 
-	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, c.baseDomain)
+	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, r.baseDomain)
 
 	record := &clouddns.ResourceRecordSet{
 		Name: apiDomain,
@@ -38,29 +46,37 @@ func (c *API) Register(ctx context.Context, cluster *capg.GCPCluster) error {
 		},
 		Type: RecordA,
 	}
-	_, err := c.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
+	_, err := r.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
 		Context(ctx).
 		Do()
 
 	if hasHttpCode(err, http.StatusConflict) {
+		logger.Info("Skipping. Record already exists")
 		return nil
 	}
 	return microerror.Mask(err)
 }
 
-func (c *API) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
-	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, c.baseDomain)
-	_, err := c.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, apiDomain, RecordA).
+func (r *API) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
+	logger := r.getLogger(ctx)
+
+	logger.Info("Unregistering record")
+	defer logger.Info("Done unregistering record")
+
+	apiDomain := fmt.Sprintf("%s.%s.%s.", EndpointAPI, cluster.Name, r.baseDomain)
+	_, err := r.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, apiDomain, RecordA).
 		Context(ctx).
 		Do()
 
 	if hasHttpCode(err, http.StatusNotFound) {
+		logger.Info("Skipping. Record already unregistered")
 		return nil
 	}
 
 	return microerror.Mask(err)
 }
 
-func (c *API) getClusterDomain(cluster *capg.GCPCluster) string {
-	return fmt.Sprintf("%s.%s.", cluster.Name, c.baseDomain)
+func (r *API) getLogger(ctx context.Context) logr.Logger {
+	logger := log.FromContext(ctx)
+	return logger.WithName("api-registrar")
 }

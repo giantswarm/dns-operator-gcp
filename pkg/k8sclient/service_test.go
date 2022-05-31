@@ -81,7 +81,7 @@ var _ = Describe("Service", func() {
 
 			It("returns an error", func() {
 				actualService, err := client.GetByLabel(ctx, "some-label", "true")
-				Expect(err).To(MatchError(ContainSubstring("found 2 matching services, expected 1")))
+				Expect(err).To(MatchError(ContainSubstring(`found 2 services matching label "some-label": "true", expected 1`)))
 				Expect(actualService).To(BeZero())
 			})
 		})
@@ -89,7 +89,7 @@ var _ = Describe("Service", func() {
 		When("there is no service matching the label key", func() {
 			It("returns an error", func() {
 				actualService, err := client.GetByLabel(ctx, "some-other-label", "true")
-				Expect(err).To(MatchError(ContainSubstring("found 0 matching services, expected 1")))
+				Expect(err).To(MatchError(ContainSubstring(`found 0 services matching label "some-other-label": "true", expected 1`)))
 				Expect(actualService).To(BeZero())
 			})
 		})
