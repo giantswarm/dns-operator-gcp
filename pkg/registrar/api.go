@@ -33,7 +33,7 @@ func (r *API) Register(ctx context.Context, cluster *capg.GCPCluster) error {
 	defer logger.Info("Done registering record")
 
 	if cluster.Spec.ControlPlaneEndpoint.Host == "" {
-		logger.Info("Skipping. Cluster does not have controplane endpoint yet")
+		logger.Info("Skipping. Cluster does not have control plane endpoint yet")
 		return nil
 	}
 
