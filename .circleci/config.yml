@@ -31,6 +31,17 @@ jobs:
       - run:
           name: "Run acceptance tests"
           command: CGO_ENABLED=0 make test-acceptance
+      - run:
+          name: "Wait for deletion"
+          command: |
+            echo "Waiting for cluster deletion"
+            while [[ -n "$(kubectl get clusters --all-namespaces -o name)" ]]; do
+              echo "-------------------------------"
+              kubectl get clusters --all-namespaces
+              sleep 1
+            done
+
+
 workflows:
   test-and-push:
     jobs:
