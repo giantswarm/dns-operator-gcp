@@ -23,6 +23,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"go.uber.org/zap/zapcore"
 	clouddns "google.golang.org/api/dns/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -35,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/pkg/dns"
 	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
+	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -76,7 +77,9 @@ func main() {
 
 	opts := zap.Options{
 		Development: true,
+		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
+
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
@@ -101,9 +104,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	client := k8sclient.NewGCPCluster(mgr.GetClient())
-	dnsClient := dns.NewClient(baseDomain, parentDNSZone, gcpProject, service)
-	controller := controllers.NewGCPClusterReconciler(mgr.GetLogger(), client, dnsClient)
+	runtimeClient := mgr.GetClient()
+	client := k8sclient.NewGCPCluster(runtimeClient)
+	serviceClient := k8sclient.NewService(registrar.IngressNamespace, runtimeClient)
+	zoneRegistrar := registrar.NewZone(baseDomain, parentDNSZone, gcpProject, service)
+	apiRegistrar := registrar.NewAPI(baseDomain, service)
+	ingressRegistrar := registrar.NewIngress(baseDomain, service, serviceClient)
+	wildcardRegistrar := registrar.NewWildcard(baseDomain, service)
+	registrars := []controllers.Registrar{
+		zoneRegistrar,
+		apiRegistrar,
+		ingressRegistrar,
+		wildcardRegistrar,
+	}
+	controller := controllers.NewGCPClusterReconciler(client, registrars)
 	err = controller.SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "failed to setup controller", "controller", "GCPCluster")

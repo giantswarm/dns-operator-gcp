@@ -76,6 +76,10 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: lint-imports
+lint-imports: goimports ## Run go vet against code.
+	./scripts/check-imports.sh
+
 .PHONY: create-acceptance-cluster
 create-acceptance-cluster: kind
 	CLUSTER=$(CLUSTER) IMG=$(IMG) ./scripts/ensure-kind-cluster.sh
@@ -99,10 +103,10 @@ test-integration: ginkgo ensure-gcp-envs ## Run integration tests
 
 .PHONY: test-acceptance
 test-acceptance: ginkgo ensure-gcp-envs deploy-acceptance-cluster ## Run acceptance testst
-	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" $(GINKGO) -p -r -randomize-all --randomize-suites tests/acceptance
+	KUBECONFIG="$(HOME)/.kube/$(CLUSTER).yml" $(GINKGO) -p -nodes 2 -r -randomize-all --randomize-suites tests/acceptance
 
 .PHONY: test-all
-test-all: lint test-unit test-integration test-acceptance ## Run all tests and litner
+test-all: lint lint-imports test-unit test-integration test-acceptance ## Run all tests and litner
 
 ##@ Build
 
@@ -144,7 +148,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 .PHONY: controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.0)
 
 ENVTEST = $(shell pwd)/bin/setup-envtest
 .PHONY: envtest
@@ -165,6 +169,11 @@ KIND = $(shell pwd)/bin/kind
 .PHONY: kind
 kind: ## Download kind locally if necessary.
 	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@latest)
+
+GOIMPORTS = $(shell pwd)/bin/goimports
+.PHONY: goimports
+goimports: ## Download kind locally if necessary.
+	$(call go-get-tool,$(GOIMPORTS),golang.org/x/tools/cmd/goimports@latest)
 
 CLUSTERCTL = $(shell pwd)/bin/clusterctl
 .PHONY: clusterctl

@@ -19,4 +19,5 @@ ensure_kind_cluster() {
 
 ensure_kind_cluster "$CLUSTER"
 kubectl create namespace giantswarm --kubeconfig "$HOME/.kube/$CLUSTER.yml" || true
+kubectl apply -f "${SCRIPT_DIR}/assets/ingress-service.yaml"
 "$KIND" load docker-image --name "$CLUSTER" "$IMG"
