@@ -20,34 +20,11 @@ func NewLoadBalancer(namespace string, client client.Client) *LoadBalancer {
 	}
 }
 
-func (s *LoadBalancer) GetIPByLabel(ctx context.Context, labelKey, labelValue string) (string, error) {
-	serviceList := &corev1.ServiceList{}
-	err := s.client.List(
-		ctx,
-		serviceList,
-		client.InNamespace(s.namespace),
-		client.MatchingLabels{labelKey: labelValue},
-	)
+func (lb *LoadBalancer) GetIPByLabel(ctx context.Context, labelKey, labelValue string) (string, error) {
+	service, err := lb.getService(ctx, labelKey, labelValue)
 	if err != nil {
-		return "", microerror.Mask(err)
+		return "", err
 	}
-
-	services := []corev1.Service{}
-	for _, s := range serviceList.Items {
-		if s.Spec.Type == corev1.ServiceTypeLoadBalancer {
-			services = append(services, s)
-		}
-	}
-
-	if len(services) != 1 {
-		return "", fmt.Errorf(
-			"found %d LoadBalancer services matching label %q: %q, expected 1",
-			len(services),
-			labelKey, labelValue,
-		)
-	}
-
-	service := services[0]
 
 	if len(service.Status.LoadBalancer.Ingress) != 1 {
 		return "", fmt.Errorf(
@@ -59,4 +36,34 @@ func (s *LoadBalancer) GetIPByLabel(ctx context.Context, labelKey, labelValue st
 	}
 
 	return service.Status.LoadBalancer.Ingress[0].IP, nil
+}
+
+func (lb *LoadBalancer) getService(ctx context.Context, labelKey, labelValue string) (corev1.Service, error) {
+	serviceList := &corev1.ServiceList{}
+	err := lb.client.List(
+		ctx,
+		serviceList,
+		client.InNamespace(lb.namespace),
+		client.MatchingLabels{labelKey: labelValue},
+	)
+	if err != nil {
+		return corev1.Service{}, microerror.Mask(err)
+	}
+
+	loadBalancerServices := []corev1.Service{}
+	for _, s := range serviceList.Items {
+		if s.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			loadBalancerServices = append(loadBalancerServices, s)
+		}
+	}
+
+	if len(loadBalancerServices) != 1 {
+		return corev1.Service{}, fmt.Errorf(
+			"found %d LoadBalancer services matching label %q: %q, expected 1",
+			len(loadBalancerServices),
+			labelKey, labelValue,
+		)
+	}
+
+	return loadBalancerServices[0], nil
 }

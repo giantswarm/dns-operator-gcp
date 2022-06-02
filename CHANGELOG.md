@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Ignore non LoadBalancer services when regitering ingress record. The nginx ingress app installs multiple ClusterIP services.
+- Ignore non LoadBalancer services when registering ingress record. The nginx ingress app installs multiple ClusterIP services.
 
 ## [0.3.0] - 2022-06-01
 
