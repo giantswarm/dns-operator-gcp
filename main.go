@@ -106,10 +106,10 @@ func main() {
 
 	runtimeClient := mgr.GetClient()
 	client := k8sclient.NewGCPCluster(runtimeClient)
-	serviceClient := k8sclient.NewService(registrar.IngressNamespace, runtimeClient)
+	loadBalancerClient := k8sclient.NewLoadBalancer(registrar.IngressNamespace, runtimeClient)
 	zoneRegistrar := registrar.NewZone(baseDomain, parentDNSZone, gcpProject, service)
 	apiRegistrar := registrar.NewAPI(baseDomain, service)
-	ingressRegistrar := registrar.NewIngress(baseDomain, service, serviceClient)
+	ingressRegistrar := registrar.NewIngress(baseDomain, service, loadBalancerClient)
 	wildcardRegistrar := registrar.NewWildcard(baseDomain, service)
 	registrars := []controllers.Registrar{
 		zoneRegistrar,

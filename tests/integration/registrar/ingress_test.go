@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	clouddns "google.golang.org/api/dns/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 
@@ -25,20 +24,18 @@ var _ = Describe("API Registrar", func() {
 		clusterName   string
 		domain        string
 		ingressDomain string
-		ingressIP     string
 
-		service corev1.Service
 		cluster *capg.GCPCluster
 
-		serviceClient    *registrarfakes.FakeServiceClient
-		dnsClient        *clouddns.Service
-		ingressRegistrar *registrar.Ingress
+		loadBalancerClient *registrarfakes.FakeLoadBalancerClient
+		dnsClient          *clouddns.Service
+		ingressRegistrar   *registrar.Ingress
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		serviceClient = new(registrarfakes.FakeServiceClient)
+		loadBalancerClient = new(registrarfakes.FakeLoadBalancerClient)
 
 		var err error
 		dnsClient, err = clouddns.NewService(context.Background())
@@ -67,29 +64,9 @@ var _ = Describe("API Registrar", func() {
 			Do()
 		Expect(err).NotTo(HaveOccurred())
 
-		ingressIP = "10.0.0.1"
-		ingressName := fmt.Sprintf("%s-ingress", clusterName)
+		loadBalancerClient.GetIPByLabelReturns("10.0.0.1", nil)
 
-		service = corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ingressName,
-			},
-			Spec: corev1.ServiceSpec{
-				Type: corev1.ServiceTypeLoadBalancer,
-			},
-			Status: corev1.ServiceStatus{
-				LoadBalancer: corev1.LoadBalancerStatus{
-					Ingress: []corev1.LoadBalancerIngress{
-						{
-							IP: ingressIP,
-						},
-					},
-				},
-			},
-		}
-		serviceClient.GetByLabelReturns(service, nil)
-
-		ingressRegistrar = registrar.NewIngress(baseDomain, dnsClient, serviceClient)
+		ingressRegistrar = registrar.NewIngress(baseDomain, dnsClient, loadBalancerClient)
 	})
 
 	AfterEach(func() {
@@ -116,7 +93,7 @@ var _ = Describe("API Registrar", func() {
 
 			record, err := dnsClient.ResourceRecordSets.Get(gcpProject, clusterName, ingressDomain, registrar.RecordA).Do()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(record.Rrdatas).To(ConsistOf(ingressIP))
+			Expect(record.Rrdatas).To(ConsistOf("10.0.0.1"))
 		})
 
 		When("the record already exists", func() {
@@ -126,45 +103,9 @@ var _ = Describe("API Registrar", func() {
 			})
 		})
 
-		When("the service is not LoadBalancer type", func() {
+		When("getting the LoadBalancer IP returns an error", func() {
 			BeforeEach(func() {
-				service.Spec.Type = corev1.ServiceTypeClusterIP
-				serviceClient.GetByLabelReturns(service, nil)
-			})
-
-			It("returns an error", func() {
-				Expect(registErr).To(MatchError(ContainSubstring("found ClusterIP Service, expected type LoadBalancer")))
-			})
-		})
-
-		When("the service does not have an ingress IP yet", func() {
-			BeforeEach(func() {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{}
-				serviceClient.GetByLabelReturns(service, nil)
-			})
-
-			It("returns an error", func() {
-				Expect(registErr).To(MatchError(ContainSubstring("found 0 LoadBalancer ingresses, expected 1")))
-			})
-		})
-
-		When("the service has more than one ingress IP", func() {
-			BeforeEach(func() {
-				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
-					{IP: ingressIP},
-					{IP: "10.1.0.1"},
-				}
-				serviceClient.GetByLabelReturns(service, nil)
-			})
-
-			It("returns an error", func() {
-				Expect(registErr).To(MatchError(ContainSubstring("found 2 LoadBalancer ingresses, expected 1")))
-			})
-		})
-
-		When("getting the service returns an error", func() {
-			BeforeEach(func() {
-				serviceClient.GetByLabelReturns(corev1.Service{}, errors.New("boom"))
+				loadBalancerClient.GetIPByLabelReturns("", errors.New("boom"))
 			})
 
 			It("returns an error", func() {
