@@ -49,7 +49,7 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 	}
 
 	for i, bastionIP := range bastionIPList {
-		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster, r.baseDomain)
+		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
 		logger.Info(fmt.Sprintf("Registering record for %s", EndpointBastion(i+1)))
 
 		record := &clouddns.ResourceRecordSet{
@@ -84,11 +84,11 @@ func (r *Bastion) Unregister(ctx context.Context, cluster *capg.GCPCluster) erro
 		return microerror.Mask(err)
 	}
 
-	for i, _ := range bastionIPList {
+	for i := range bastionIPList {
 		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
 		logger.Info(fmt.Sprintf("Unregistering record for %s", EndpointBastion(i+1)))
 
-		_, err := r.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA).
+		_, err = r.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA).
 			Context(ctx).
 			Do()
 
