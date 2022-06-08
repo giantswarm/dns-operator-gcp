@@ -35,9 +35,6 @@ func NewBastion(baseDomain string, bastionsClient BastionsClient, dnsService *cl
 
 func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error {
 	logger := r.getLogger(ctx)
-
-	defer logger.Info("Done registering record")
-
 	err := r.bastionsClient.AddFinalizerToBastions(ctx, cluster)
 	if err != nil {
 		return microerror.Mask(err)
