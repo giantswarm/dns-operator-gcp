@@ -78,7 +78,7 @@ var _ = Describe("Service", func() {
 			Expect(k8sClient.Delete(ctx, service)).To(Succeed())
 		})
 
-		It("gets the service", func() {
+		It("gets the service ip", func() {
 			ip, err := loadBalancer.GetIPByLabel(ctx, "some-label", "true")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ip).To(Equal("10.0.0.1"))
@@ -135,7 +135,6 @@ var _ = Describe("Service", func() {
 
 		When("there is more than one LoadBalancer service matching the label", func() {
 			var otherService *corev1.Service
-
 			BeforeEach(func() {
 				otherService = &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -152,17 +151,50 @@ var _ = Describe("Service", func() {
 						},
 					},
 				}
-				Expect(k8sClient.Create(ctx, otherService)).To(Succeed())
 			})
 
 			AfterEach(func() {
 				Expect(k8sClient.Delete(ctx, otherService)).To(Succeed())
 			})
 
-			It("returns an error", func() {
-				ip, err := loadBalancer.GetIPByLabel(ctx, "some-label", "true")
-				Expect(err).To(MatchError(ContainSubstring(`found 2 LoadBalancer services matching label "some-label": "true", expected 1`)))
-				Expect(ip).To(BeZero())
+			When("the other service is in another namespace", func() {
+				BeforeEach(func() {
+					otherService.Namespace = "default"
+					Expect(k8sClient.Create(ctx, otherService)).To(Succeed())
+				})
+
+				It("gets the service ip", func() {
+					ip, err := loadBalancer.GetIPByLabel(ctx, "some-label", "true")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(ip).To(Equal("10.0.0.1"))
+				})
+			})
+
+			When("the other service is in the same namespace", func() {
+				BeforeEach(func() {
+					otherService = &corev1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "another-ingress-service",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"some-label": "true",
+							},
+						},
+						Spec: corev1.ServiceSpec{
+							Type: corev1.ServiceTypeLoadBalancer,
+							Ports: []corev1.ServicePort{
+								{Port: 8080},
+							},
+						},
+					}
+					Expect(k8sClient.Create(ctx, otherService)).To(Succeed())
+				})
+
+				It("returns an error", func() {
+					ip, err := loadBalancer.GetIPByLabel(ctx, "some-label", "true")
+					Expect(err).To(MatchError(ContainSubstring(`found 2 LoadBalancer services matching label "some-label": "true", expected 1`)))
+					Expect(ip).To(BeZero())
+				})
 			})
 		})
 

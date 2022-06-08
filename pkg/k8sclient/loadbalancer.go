@@ -16,7 +16,8 @@ type LoadBalancer struct {
 
 func NewLoadBalancer(namespace string, client client.Client) *LoadBalancer {
 	return &LoadBalancer{
-		client: client,
+		namespace: namespace,
+		client:    client,
 	}
 }
 
