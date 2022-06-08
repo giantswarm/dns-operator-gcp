@@ -77,6 +77,10 @@ func (b *Bastions) AddFinalizerToBastions(ctx context.Context, cluster *capg.GCP
 	}
 
 	for _, bastion := range machineList.Items {
+		if !bastion.DeletionTimestamp.IsZero() {
+			continue
+		}
+
 		original := bastion.DeepCopy()
 		controllerutil.AddFinalizer(&bastion, b.finalizer)
 		err := b.client.Patch(ctx, &bastion, client.MergeFrom(original))
