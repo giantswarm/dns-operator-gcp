@@ -107,7 +107,7 @@ var _ = Describe("MachineList", func() {
 			BeforeEach(func() {
 				otherMachine = &capg.GCPMachine{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cluster-bastion-1",
+						Name:      "test-cluster-bastion-2",
 						Namespace: namespace,
 						Labels: map[string]string{
 							k8sclient.BastionLabelKey: k8sclient.BastionLabel("test-cluster"),
