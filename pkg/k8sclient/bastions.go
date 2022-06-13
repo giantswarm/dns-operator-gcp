@@ -48,6 +48,10 @@ func (b *Bastions) GetBastionIPList(ctx context.Context, cluster *capg.GCPCluste
 		}
 	}
 
+	if len(bastionPublicIPList) == 0 {
+		return nil, errors.New("bastion IP is not yet available")
+	}
+
 	return bastionPublicIPList, nil
 }
 
@@ -57,7 +61,7 @@ func (b *Bastions) getBastionMachineList(ctx context.Context, cluster *capg.GCPC
 		ctx,
 		machineList,
 		client.InNamespace(cluster.Namespace),
-		client.MatchingLabels{BastionLabelKey: bastionLabel(cluster.Name)},
+		client.MatchingLabels{BastionLabelKey: BastionLabel(cluster.Name)},
 	)
 	if err != nil {
 		return nil, microerror.Mask(err)
@@ -66,7 +70,7 @@ func (b *Bastions) getBastionMachineList(ctx context.Context, cluster *capg.GCPC
 	return machineList, nil
 }
 
-func bastionLabel(clusterName string) string {
+func BastionLabel(clusterName string) string {
 	return fmt.Sprintf("%s-bastion", clusterName)
 }
 
