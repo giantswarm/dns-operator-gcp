@@ -10,7 +10,7 @@ replace (
 	// This is caused by importing sigs.k8s.io/cluster-api-provider-gcp@v1.0.2.
 	// The current main branch contains updated dependencies, but has not been released yet,
 	// which means that this replace can be removed in with the next version.
-	github.com/containerd/containerd => github.com/containerd/containerd v1.6.4
+	github.com/containerd/containerd => github.com/containerd/containerd v1.6.6
 
 	// Fix vulnerability: CVE-2020-15114 in etcd v3.3.13+incompatible
 	github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
