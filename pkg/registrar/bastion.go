@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-//counterfeiter:generate . LoadBalancerClient
+//counterfeiter:generate . BastionsClient
 type BastionsClient interface {
 	GetBastionIPList(ctx context.Context, cluster *capg.GCPCluster) ([]string, error)
 	AddFinalizerToBastions(ctx context.Context, cluster *capg.GCPCluster) error
