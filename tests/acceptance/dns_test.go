@@ -16,6 +16,7 @@ import (
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
 	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
 	"github.com/giantswarm/dns-operator-gcp/tests"
 )
@@ -28,6 +29,7 @@ var _ = Describe("DNS", func() {
 		clusterName   string
 		clusterDomain string
 		apiDomain     string
+		bastionDomain string
 		ingressDomain string
 		cluster       *capi.Cluster
 		gcpCluster    *capg.GCPCluster
@@ -41,6 +43,7 @@ var _ = Describe("DNS", func() {
 		clusterName = tests.GenerateGUID("test")
 		clusterDomain = fmt.Sprintf("%s.%s.", clusterName, baseDomain)
 		apiDomain = fmt.Sprintf("%s.%s", registrar.EndpointAPI, clusterDomain)
+		bastionDomain = fmt.Sprintf("%s.%s", registrar.EndpointBastion(0), clusterDomain)
 		ingressDomain = fmt.Sprintf("%s.%s", registrar.EndpointIngress, clusterDomain)
 
 		resolver = &net.Resolver{
@@ -113,6 +116,28 @@ var _ = Describe("DNS", func() {
 
 		err := k8sClient.Status().Patch(ctx, patchedService, client.MergeFrom(service))
 		Expect(err).NotTo(HaveOccurred())
+
+		machine := &capg.GCPMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cluster-bastion-1",
+				Namespace: namespace,
+				Labels: map[string]string{
+					k8sclient.BastionLabelKey: k8sclient.BastionLabel("test-cluster"),
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, machine)).To(Succeed())
+
+		patchedMachine := machine.DeepCopy()
+		patchedMachine.Status = capg.GCPMachineStatus{
+			Addresses: []corev1.NodeAddress{
+				{
+					Type:    "ExternalIP",
+					Address: "1.2.3.4",
+				},
+			},
+		}
+		Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
 	})
 
 	It("creates an NS record for the cluster", func() {
@@ -136,6 +161,18 @@ var _ = Describe("DNS", func() {
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("10.0.0.1"))
+	})
+
+	It("creates an A record for the bastion", func() {
+		var records []net.IP
+		Eventually(func() error {
+			var err error
+			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
+			return err
+		}).Should(Succeed())
+
+		Expect(records).To(HaveLen(1))
+		Expect(records[0].String()).To(Equal("1.2.3.4"))
 	})
 
 	It("creates an A record for the ingress", func() {
@@ -204,6 +241,14 @@ var _ = Describe("DNS", func() {
 			Eventually(func() error {
 				var err error
 				_, err = resolver.LookupIP(ctx, "ip", apiDomain)
+				return err
+			}).ShouldNot(Succeed())
+		})
+
+		It("removes the bastion A record", func() {
+			Eventually(func() error {
+				var err error
+				_, err = resolver.LookupIP(ctx, "ip", bastionDomain)
 				return err
 			}).ShouldNot(Succeed())
 		})
