@@ -115,18 +115,18 @@ var _ = Describe("DNS", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("creates an NS record for the cluster", func() {
-		var records []*net.NS
+	It("creates the cluster DNS records", func() {
+		By("creating an NS record for the cluster domain")
+		var nsRecords []*net.NS
 		Eventually(func() error {
 			var err error
-			records, err = resolver.LookupNS(ctx, clusterDomain)
+			nsRecords, err = resolver.LookupNS(ctx, clusterDomain)
 			return err
 		}).Should(Succeed())
 
-		Expect(records).ToNot(BeEmpty())
-	})
+		Expect(nsRecords).ToNot(BeEmpty())
 
-	It("creates an A record for the kube api", func() {
+		By("creating an A record for the kube api")
 		var records []net.IP
 		Eventually(func() error {
 			var err error
@@ -136,10 +136,8 @@ var _ = Describe("DNS", func() {
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("10.0.0.1"))
-	})
 
-	It("creates an A record for the ingress", func() {
-		var records []net.IP
+		By("creating an A record for the ingress")
 		Eventually(func() error {
 			var err error
 			records, err = resolver.LookupIP(ctx, "ip", ingressDomain)
@@ -148,9 +146,8 @@ var _ = Describe("DNS", func() {
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("10.0.0.2"))
-	})
 
-	It("creates a CNAME record for the wildcard domain", func() {
+		By("creating a CNAME record for the wildcard domain")
 		wildcardDomain := fmt.Sprintf("%s.%s", uuid.NewString(), clusterDomain)
 		var record string
 		Eventually(func() error {
@@ -161,14 +158,15 @@ var _ = Describe("DNS", func() {
 
 		Expect(record).To(Equal(ingressDomain))
 
-		var records []string
+		By("creating an A record for the wildcard domain")
+		var hostRecords []string
 		Eventually(func() error {
 			var err error
-			records, err = resolver.LookupHost(ctx, wildcardDomain)
+			hostRecords, err = resolver.LookupHost(ctx, wildcardDomain)
 			return err
 		}).Should(Succeed())
 
-		Expect(records).To(ConsistOf("10.0.0.2"))
+		Expect(hostRecords).To(ConsistOf("10.0.0.2"))
 	})
 
 	When("the cluster is deleted", func() {
@@ -182,7 +180,8 @@ var _ = Describe("DNS", func() {
 			Expect(k8sClient.Delete(ctx, cluster)).To(Succeed())
 		})
 
-		It("does not prevent the cluster deletion", func() {
+		It("creates the cluster DNS records", func() {
+			By("not preventng the cluster deletion")
 			nsName := types.NamespacedName{
 				Name:      gcpCluster.Name,
 				Namespace: gcpCluster.Namespace,
@@ -191,24 +190,21 @@ var _ = Describe("DNS", func() {
 			Eventually(func() error {
 				return k8sClient.Get(ctx, nsName, &capg.GCPCluster{})
 			}).ShouldNot(Succeed())
-		})
 
-		It("removes the ns record", func() {
+			By("removing the ns record")
 			Eventually(func() error {
 				_, err := resolver.LookupNS(ctx, clusterDomain)
 				return err
 			}).ShouldNot(Succeed())
-		})
 
-		It("removes the api A record", func() {
+			By("removing the api A record")
 			Eventually(func() error {
 				var err error
 				_, err = resolver.LookupIP(ctx, "ip", apiDomain)
 				return err
 			}).ShouldNot(Succeed())
-		})
 
-		It("removes the ingress A record", func() {
+			By("removing the ingress A record")
 			Eventually(func() error {
 				var err error
 				_, err = resolver.LookupIP(ctx, "ip", ingressDomain)
