@@ -43,7 +43,7 @@ var _ = Describe("DNS", func() {
 		clusterName = tests.GenerateGUID("test")
 		clusterDomain = fmt.Sprintf("%s.%s.", clusterName, baseDomain)
 		apiDomain = fmt.Sprintf("%s.%s", registrar.EndpointAPI, clusterDomain)
-		bastionDomain = fmt.Sprintf("%s.%s", registrar.EndpointBastion(0), clusterDomain)
+		bastionDomain = fmt.Sprintf("%s.%s", registrar.EndpointBastion(1), clusterDomain)
 		ingressDomain = fmt.Sprintf("%s.%s", registrar.EndpointIngress, clusterDomain)
 
 		resolver = &net.Resolver{
