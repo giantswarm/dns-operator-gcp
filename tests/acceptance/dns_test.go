@@ -33,6 +33,7 @@ var _ = Describe("DNS", func() {
 		ingressDomain string
 		cluster       *capi.Cluster
 		gcpCluster    *capg.GCPCluster
+		machine       *capg.GCPMachine
 	)
 
 	BeforeEach(func() {
@@ -117,7 +118,7 @@ var _ = Describe("DNS", func() {
 		err := k8sClient.Status().Patch(ctx, patchedService, client.MergeFrom(service))
 		Expect(err).NotTo(HaveOccurred())
 
-		machine := &capg.GCPMachine{
+		machine = &capg.GCPMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-cluster-bastion-1",
 				Namespace: namespace,
@@ -173,6 +174,32 @@ var _ = Describe("DNS", func() {
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("1.2.3.4"))
+	})
+
+	It("updates an A record for the bastion", func() {
+
+		BeforeEach(func() {
+			patchedMachine := machine.DeepCopy()
+			patchedMachine.Status = capg.GCPMachineStatus{
+				Addresses: []corev1.NodeAddress{
+					{
+						Type:    "ExternalIP",
+						Address: "1.2.3.5",
+					},
+				},
+			}
+			Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
+		})
+
+		var records []net.IP
+		Eventually(func() error {
+			var err error
+			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
+			return err
+		}).Should(Succeed())
+
+		Expect(records).To(HaveLen(1))
+		Expect(records[0].String()).To(Equal("1.2.3.5"))
 	})
 
 	It("creates an A record for the ingress", func() {

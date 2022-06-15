@@ -56,13 +56,33 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 			},
 			Type: RecordA,
 		}
-		_, err := r.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
+		_, err = r.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
 			Context(ctx).
 			Do()
 
 		if hasHttpCode(err, http.StatusConflict) {
-			logger.Info(fmt.Sprintf("Skipping. Record for %s already exists", EndpointBastion(i+1)))
-			continue
+			// record exists, check if the IP matches
+			rr, err := r.dnsService.ResourceRecordSets.Get(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA). //nolint:govet
+																	Context(ctx).
+																	Do()
+			if err != nil {
+				return microerror.Mask(err)
+			}
+
+			if len(rr.Rrdatas) != 1 || rr.Rrdatas[0] != bastionIP {
+				logger.Info(fmt.Sprintf("Bastion record %s exists but its not up to date. Udating record", EndpointBastion(i+1)))
+
+				_, err = r.dnsService.ResourceRecordSets.Patch(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA, record).
+					Context(ctx).
+					Do()
+				if err != nil {
+					return microerror.Mask(err)
+				}
+				logger.Info(fmt.Sprintf("Updated Bastion record %s.", EndpointBastion(i+1)))
+			} else {
+				logger.Info(fmt.Sprintf("Skipping. Record for %s already exists", EndpointBastion(i+1)))
+				continue
+			}
 		}
 		if err != nil {
 			return microerror.Mask(err)
