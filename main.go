@@ -116,7 +116,7 @@ func main() {
 	registrars := []controllers.Registrar{
 		zoneRegistrar,
 		apiRegistrar,
-		bastionRegistrat,
+		bastionRegistrar,
 		ingressRegistrar,
 		wildcardRegistrar,
 	}
