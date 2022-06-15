@@ -110,7 +110,7 @@ func main() {
 	loadBalancerClient := k8sclient.NewLoadBalancer(registrar.IngressNamespace, runtimeClient)
 	zoneRegistrar := registrar.NewZone(baseDomain, parentDNSZone, gcpProject, service)
 	apiRegistrar := registrar.NewAPI(baseDomain, service)
-	bastionRegistrat := registrar.NewBastion(baseDomain, bastionsClient, service)
+	bastionRegistrar := registrar.NewBastion(baseDomain, bastionsClient, service)
 	ingressRegistrar := registrar.NewIngress(baseDomain, service, loadBalancerClient)
 	wildcardRegistrar := registrar.NewWildcard(baseDomain, service)
 	registrars := []controllers.Registrar{
