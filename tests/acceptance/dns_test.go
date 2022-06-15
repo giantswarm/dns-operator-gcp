@@ -176,30 +176,30 @@ var _ = Describe("DNS", func() {
 		Expect(records[0].String()).To(Equal("1.2.3.4"))
 	})
 
-	It("updates an A record for the bastion", func() {
-
-		BeforeEach(func() {
-			patchedMachine := machine.DeepCopy()
-			patchedMachine.Status = capg.GCPMachineStatus{
-				Addresses: []corev1.NodeAddress{
-					{
-						Type:    "ExternalIP",
-						Address: "1.2.3.5",
-					},
+	When("the bastion host is assigned an external ip", func() {
+		patchedMachine := machine.DeepCopy()
+		patchedMachine.Status = capg.GCPMachineStatus{
+			Addresses: []corev1.NodeAddress{
+				{
+					Type:    "ExternalIP",
+					Address: "1.2.3.5",
 				},
-			}
-			Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
+			},
+		}
+		Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
+
+		It("updates an A record for the bastion", func() {
+
+			var records []net.IP
+			Eventually(func() error {
+				var err error
+				records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
+				return err
+			}).Should(Succeed())
+
+			Expect(records).To(HaveLen(1))
+			Expect(records[0].String()).To(Equal("1.2.3.5"))
 		})
-
-		var records []net.IP
-		Eventually(func() error {
-			var err error
-			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
-			return err
-		}).Should(Succeed())
-
-		Expect(records).To(HaveLen(1))
-		Expect(records[0].String()).To(Equal("1.2.3.5"))
 	})
 
 	It("creates an A record for the ingress", func() {
