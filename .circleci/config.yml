@@ -33,6 +33,7 @@ jobs:
           command: CGO_ENABLED=0 make test-acceptance
       - run:
           name: "Wait for deletion"
+          when: always
           command: |
             echo "Waiting for cluster deletion"
             while [[ -n "$(kubectl get clusters --all-namespaces -o name)" ]]; do
