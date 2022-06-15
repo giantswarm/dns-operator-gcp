@@ -36,7 +36,7 @@ func (b *Bastions) GetBastionIPList(ctx context.Context, cluster *capg.GCPCluste
 	for _, machine := range machineList.Items {
 		// no ip address yet
 		if len(machine.Status.Addresses) == 0 {
-			return nil, errors.New("bastion IP is not yet available")
+			return nil, microerror.Mask(errors.New("bastion IP is not yet available"))
 		}
 
 		// get the public IP

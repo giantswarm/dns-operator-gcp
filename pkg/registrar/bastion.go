@@ -47,7 +47,8 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 
 	for i, bastionIP := range bastionIPList {
 		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
-		logger.Info(fmt.Sprintf("Registering record for %s", EndpointBastion(i+1)))
+		logger := logger.WithValues("record", bastionDomain)
+		logger.Info("Registering record")
 
 		record := &clouddns.ResourceRecordSet{
 			Name: bastionDomain,
@@ -70,7 +71,7 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 			}
 
 			if len(rr.Rrdatas) != 1 || rr.Rrdatas[0] != bastionIP {
-				logger.Info(fmt.Sprintf("Bastion record %s exists but its not up to date. Udating record", EndpointBastion(i+1)))
+				logger.Info("Bastion record exists but its not up to date. Updating record")
 
 				_, err = r.dnsService.ResourceRecordSets.Patch(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA, record).
 					Context(ctx).
@@ -78,16 +79,16 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 				if err != nil {
 					return microerror.Mask(err)
 				}
-				logger.Info(fmt.Sprintf("Updated Bastion record %s.", EndpointBastion(i+1)))
+				logger.Info("Updated Bastion record")
 			} else {
-				logger.Info(fmt.Sprintf("Skipping. Record for %s already exists", EndpointBastion(i+1)))
+				logger.Info("Skipping. Record already exists")
 				continue
 			}
 		}
 		if err != nil {
 			return microerror.Mask(err)
 		}
-		logger.Info(fmt.Sprintf("Done Registering record for %s", EndpointBastion(i+1)))
+		logger.Info("Done Registering record")
 	}
 
 	return nil
@@ -103,20 +104,21 @@ func (r *Bastion) Unregister(ctx context.Context, cluster *capg.GCPCluster) erro
 
 	for i := range bastionIPList {
 		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
-		logger.Info(fmt.Sprintf("Unregistering record for %s", EndpointBastion(i+1)))
+		logger := logger.WithValues("record", bastionDomain)
+		logger.Info("Unregistering record")
 
 		_, err = r.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA).
 			Context(ctx).
 			Do()
 
 		if hasHttpCode(err, http.StatusNotFound) {
-			logger.Info(fmt.Sprintf("Skipping. Record for %s already unregistered", EndpointBastion(i+1)))
+			logger.Info("Skipping. Record already unregistered")
 			continue
 		}
 		if err != nil {
 			return microerror.Mask(err)
 		}
-		logger.Info(fmt.Sprintf("Done unregistering record for %s", EndpointBastion(i+1)))
+		logger.Info("Done unregistering record")
 	}
 
 	err = r.bastionsClient.RemoveFinalizerFromBastions(ctx, cluster)
