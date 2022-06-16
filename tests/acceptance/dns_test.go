@@ -26,14 +26,15 @@ var _ = Describe("DNS", func() {
 		ctx      context.Context
 		resolver *net.Resolver
 
-		clusterName   string
-		clusterDomain string
-		apiDomain     string
-		bastionDomain string
-		ingressDomain string
-		cluster       *capi.Cluster
-		gcpCluster    *capg.GCPCluster
-		machine       *capg.GCPMachine
+		clusterName    string
+		clusterDomain  string
+		apiDomain      string
+		bastionDomain  string
+		ingressDomain  string
+		cluster        *capi.Cluster
+		gcpCluster     *capg.GCPCluster
+		machine        *capg.GCPMachine
+		patchedMachine *capg.GCPMachine
 	)
 
 	BeforeEach(func() {
@@ -129,7 +130,7 @@ var _ = Describe("DNS", func() {
 		}
 		Expect(k8sClient.Create(ctx, machine)).To(Succeed())
 
-		patchedMachine := machine.DeepCopy()
+		patchedMachine = machine.DeepCopy()
 		patchedMachine.Status = capg.GCPMachineStatus{
 			Addresses: []corev1.NodeAddress{
 				{
@@ -138,7 +139,6 @@ var _ = Describe("DNS", func() {
 				},
 			},
 		}
-		Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
 	})
 
 	It("creates the cluster DNS records", func() {
@@ -162,6 +162,28 @@ var _ = Describe("DNS", func() {
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("10.0.0.1"))
+
+		By("creating an A record for the bastion1")
+		Eventually(func() error {
+			var err error
+			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
+			return err
+		}).Should(Succeed())
+
+		Expect(records).To(HaveLen(1))
+		Expect(records[0].String()).To(Equal("1.2.3.4"))
+
+		// patch bastion machine with different IP
+		Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
+		By("updating an A record for the bastion1")
+		Eventually(func() error {
+			var err error
+			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
+			return err
+		}).Should(Succeed())
+
+		Expect(records).To(HaveLen(1))
+		Expect(records[0].String()).To(Equal("1.2.3.5"))
 
 		By("creating an A record for the ingress")
 		Eventually(func() error {
