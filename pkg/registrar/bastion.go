@@ -79,16 +79,15 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 				if err != nil {
 					return microerror.Mask(err)
 				}
-				logger.Info("Updated Bastion record")
+				logger.Info("Updated Bastion record", "ip", bastionIP)
 			} else {
 				logger.Info("Skipping. Record already exists")
 				continue
 			}
-		}
-		if err != nil {
+		} else if err != nil {
 			return microerror.Mask(err)
 		}
-		logger.Info("Done Registering record")
+		logger.Info("Done Registering record", "ip", bastionIP)
 	}
 
 	return nil

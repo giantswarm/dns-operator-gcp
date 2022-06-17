@@ -2,6 +2,7 @@ package acceptance_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -174,22 +175,36 @@ var _ = Describe("DNS", func() {
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("1.2.3.4"))
 
-		// patch bastion machine with different IP
+		// update bastion machine with different IP
 		patchedMachine := machine.DeepCopy()
-		patchedMachine.Status = capg.GCPMachineStatus{
-			Addresses: []corev1.NodeAddress{
-				{
-					Type:    "ExternalIP",
-					Address: "1.2.3.5",
-				},
+		patchedMachine.Status.Addresses = []corev1.NodeAddress{
+			{
+				Type:    "ExternalIP",
+				Address: "1.2.3.5",
 			},
 		}
 		Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
+
+		// trigger reconciliation loop by update to speed up tests
+		patchedCluster := gcpCluster.DeepCopy()
+		patchedCluster.Labels = map[string]string{
+			"extra": "label",
+		}
+		Expect(k8sClient.Status().Patch(ctx, patchedCluster, client.MergeFrom(gcpCluster))).To(Succeed())
+
 		By("updating an A record for the bastion1")
 		Eventually(func() error {
 			var err error
 			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
-			return err
+			if err != nil {
+				return err
+			}
+			// we need to wait until the record is updated
+			if records[0].String() != "1.2.3.5" {
+				return errors.New("record not updated yet")
+			}
+
+			return nil
 		}).Should(Succeed())
 
 		Expect(records).To(HaveLen(1))
