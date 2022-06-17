@@ -2,7 +2,6 @@ package acceptance_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -193,7 +192,6 @@ var _ = Describe("DNS", func() {
 		}
 		Expect(k8sClient.Status().Patch(ctx, patchedCluster, client.MergeFrom(gcpCluster))).To(Succeed())
 
-		
 		Eventually(func(g Gomega) (string, error) {
 			var err error
 			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
@@ -204,13 +202,6 @@ var _ = Describe("DNS", func() {
 			g.Expect(records).To(HaveLen(1))
 			return records[0].String(), nil
 		}).Should(Equal("1.2.3.5"))
-
-
-			return nil
-		}).Should(Succeed())
-
-		Expect(records).To(HaveLen(1))
-		Expect(records[0].String()).To(Equal("1.2.3.5"))
 
 		By("creating an A record for the ingress")
 		Eventually(func() error {
