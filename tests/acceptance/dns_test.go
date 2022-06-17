@@ -193,16 +193,18 @@ var _ = Describe("DNS", func() {
 		}
 		Expect(k8sClient.Status().Patch(ctx, patchedCluster, client.MergeFrom(gcpCluster))).To(Succeed())
 
-		Eventually(func() error {
+		
+		Eventually(func(g Gomega) (string, error) {
 			var err error
 			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
 			if err != nil {
-				return err
+				return "", err
 			}
-			// we need to wait until the record is updated
-			if records[0].String() == "1.2.3.4" {
-				return errors.New("record not updated yet")
-			}
+
+			g.Expect(records).To(HaveLen(1))
+			return records[0].String(), nil
+		}).Should(Equal("1.2.3.5"))
+
 
 			return nil
 		}).Should(Succeed())
