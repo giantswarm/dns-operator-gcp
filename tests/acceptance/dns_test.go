@@ -175,6 +175,7 @@ var _ = Describe("DNS", func() {
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("1.2.3.4"))
 
+		By("updating an A record for the bastion1")
 		// update bastion machine with different IP
 		patchedMachine := machine.DeepCopy()
 		patchedMachine.Status.Addresses = []corev1.NodeAddress{
@@ -192,7 +193,6 @@ var _ = Describe("DNS", func() {
 		}
 		Expect(k8sClient.Status().Patch(ctx, patchedCluster, client.MergeFrom(gcpCluster))).To(Succeed())
 
-		By("updating an A record for the bastion1")
 		Eventually(func() error {
 			var err error
 			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
@@ -200,7 +200,7 @@ var _ = Describe("DNS", func() {
 				return err
 			}
 			// we need to wait until the record is updated
-			if records[0].String() != "1.2.3.5" {
+			if records[0].String() == "1.2.3.4" {
 				return errors.New("record not updated yet")
 			}
 
