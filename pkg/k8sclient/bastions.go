@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const BastionLabelKey = "cluster.x-k8s.io/deployment-name"
+const LabelBastionKey = "cluster.x-k8s.io/deployment-name"
 
 type Bastions struct {
 	client    client.Client
@@ -34,12 +34,9 @@ func (b *Bastions) GetBastionIPList(ctx context.Context, cluster *capg.GCPCluste
 	var bastionPublicIPList []string
 
 	for _, machine := range machineList.Items {
-		// no ip address yet
 		if len(machine.Status.Addresses) == 0 {
 			return nil, microerror.Mask(errors.New("bastion IP is not yet available"))
 		}
-
-		// get the public IP
 		for _, addr := range machine.Status.Addresses {
 			if addr.Type == "ExternalIP" {
 				bastionPublicIPList = append(bastionPublicIPList, addr.Address)
@@ -61,7 +58,7 @@ func (b *Bastions) getBastionMachineList(ctx context.Context, cluster *capg.GCPC
 		ctx,
 		machineList,
 		client.InNamespace(cluster.Namespace),
-		client.MatchingLabels{BastionLabelKey: BastionLabel(cluster.Name)},
+		client.MatchingLabels{LabelBastionKey: BastionLabel(cluster.Name)},
 	)
 	if err != nil {
 		return nil, microerror.Mask(err)

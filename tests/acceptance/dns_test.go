@@ -124,7 +124,7 @@ var _ = Describe("DNS", func() {
 				Name:      "test-cluster-bastion-1",
 				Namespace: namespace,
 				Labels: map[string]string{
-					k8sclient.BastionLabelKey: k8sclient.BastionLabel(clusterName),
+					k8sclient.LabelBastionKey: k8sclient.BastionLabel(clusterName),
 				},
 			},
 		}

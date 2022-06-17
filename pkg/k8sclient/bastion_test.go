@@ -41,7 +41,7 @@ var _ = Describe("MachineList", func() {
 					Name:      "test-cluster-bastion-1",
 					Namespace: namespace,
 					Labels: map[string]string{
-						k8sclient.BastionLabelKey: k8sclient.BastionLabel("test-cluster"),
+						k8sclient.LabelBastionKey: k8sclient.BastionLabel("test-cluster"),
 					},
 				},
 			}
@@ -52,7 +52,7 @@ var _ = Describe("MachineList", func() {
 					Name:      "other-cluster-bastion-1",
 					Namespace: namespace,
 					Labels: map[string]string{
-						k8sclient.BastionLabelKey: k8sclient.BastionLabel("test-cluster-1"),
+						k8sclient.LabelBastionKey: k8sclient.BastionLabel("test-cluster-1"),
 					},
 				},
 			}
@@ -110,7 +110,7 @@ var _ = Describe("MachineList", func() {
 						Name:      "test-cluster-bastion-2",
 						Namespace: namespace,
 						Labels: map[string]string{
-							k8sclient.BastionLabelKey: k8sclient.BastionLabel("test-cluster"),
+							k8sclient.LabelBastionKey: k8sclient.BastionLabel("test-cluster"),
 						},
 					},
 				}
