@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
 - Add DNS record for bastion nodes.
+
+### Removed
+
+- Remove ingress registrar, as ingress DNS record will be created by external-dns.
 
 ## [0.4.0] - 2022-06-02
 

@@ -12,7 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const EndpointWildcard = "*"
+const (
+	EndpointIngress  = "ingress"
+	EndpointWildcard = "*"
+)
 
 type Wildcard struct {
 	baseDomain string

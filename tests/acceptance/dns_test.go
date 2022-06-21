@@ -88,36 +88,6 @@ var _ = Describe("DNS", func() {
 		}
 		Expect(k8sClient.Create(ctx, gcpCluster)).To(Succeed())
 
-		service := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ingress-service",
-				Namespace: registrar.IngressNamespace,
-				Labels: map[string]string{
-					registrar.LabelIngressKey: registrar.LabelIngressValue,
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Type: corev1.ServiceTypeLoadBalancer,
-				Ports: []corev1.ServicePort{
-					{Port: 8080},
-				},
-			},
-		}
-
-		patchedService := service.DeepCopy()
-		patchedService.Status = corev1.ServiceStatus{
-			LoadBalancer: corev1.LoadBalancerStatus{
-				Ingress: []corev1.LoadBalancerIngress{
-					{
-						IP: "10.0.0.2",
-					},
-				},
-			},
-		}
-
-		err := k8sClient.Status().Patch(ctx, patchedService, client.MergeFrom(service))
-		Expect(err).NotTo(HaveOccurred())
-
 		machine = &capg.GCPMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-cluster-bastion-1",
@@ -202,16 +172,6 @@ var _ = Describe("DNS", func() {
 			g.Expect(records).To(HaveLen(1))
 			return records[0].String(), nil
 		}).Should(Equal("1.2.3.5"))
-
-		By("creating an A record for the ingress")
-		Eventually(func() error {
-			var err error
-			records, err = resolver.LookupIP(ctx, "ip", ingressDomain)
-			return err
-		}).Should(Succeed())
-
-		Expect(records).To(HaveLen(1))
-		Expect(records[0].String()).To(Equal("10.0.0.2"))
 
 		By("creating a CNAME record for the wildcard domain")
 		wildcardDomain := fmt.Sprintf("%s.%s", uuid.NewString(), clusterDomain)

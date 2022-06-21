@@ -38,7 +38,7 @@ import (
 	"github.com/giantswarm/dns-operator-gcp/controllers"
 	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
 	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
-	//+kubebuilder:scaffold:imports
+	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -51,7 +51,7 @@ func init() {
 	utilruntime.Must(capg.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
 
-	//+kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -107,17 +107,14 @@ func main() {
 	runtimeClient := mgr.GetClient()
 	client := k8sclient.NewGCPCluster(runtimeClient)
 	bastionsClient := k8sclient.NewBastions(runtimeClient, controllers.FinalizerDNS)
-	loadBalancerClient := k8sclient.NewLoadBalancer(registrar.IngressNamespace, runtimeClient)
 	zoneRegistrar := registrar.NewZone(baseDomain, parentDNSZone, gcpProject, service)
 	apiRegistrar := registrar.NewAPI(baseDomain, service)
 	bastionRegistrar := registrar.NewBastion(baseDomain, bastionsClient, service)
-	ingressRegistrar := registrar.NewIngress(baseDomain, service, loadBalancerClient)
 	wildcardRegistrar := registrar.NewWildcard(baseDomain, service)
 	registrars := []controllers.Registrar{
 		zoneRegistrar,
 		apiRegistrar,
 		bastionRegistrar,
-		ingressRegistrar,
 		wildcardRegistrar,
 	}
 	controller := controllers.NewGCPClusterReconciler(client, registrars)
@@ -127,7 +124,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	//+kubebuilder:scaffold:builder
+	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
