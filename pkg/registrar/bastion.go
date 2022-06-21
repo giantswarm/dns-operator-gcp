@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/giantswarm/microerror"
 	"github.com/go-logr/logr"
@@ -15,8 +16,6 @@ import (
 //counterfeiter:generate . BastionsClient
 type BastionsClient interface {
 	GetBastionIPList(ctx context.Context, cluster *capg.GCPCluster) ([]string, error)
-	AddFinalizerToBastions(ctx context.Context, cluster *capg.GCPCluster) error
-	RemoveFinalizerFromBastions(ctx context.Context, cluster *capg.GCPCluster) error
 }
 
 type Bastion struct {
@@ -35,10 +34,6 @@ func NewBastion(baseDomain string, bastionsClient BastionsClient, dnsService *cl
 
 func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error {
 	logger := r.getLogger(ctx)
-	err := r.bastionsClient.AddFinalizerToBastions(ctx, cluster)
-	if err != nil {
-		return microerror.Mask(err)
-	}
 
 	bastionIPList, err := r.bastionsClient.GetBastionIPList(ctx, cluster)
 	if err != nil {
@@ -62,27 +57,9 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 			Do()
 
 		if hasHttpCode(err, http.StatusConflict) {
-			// record exists, check if the IP matches
-			rr, err := r.dnsService.ResourceRecordSets.Get(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA). //nolint:govet
-																	Context(ctx).
-																	Do()
+			err = r.updateBastionRecordIfNotUptoDate(ctx, cluster, record, logger)
 			if err != nil {
 				return microerror.Mask(err)
-			}
-
-			if len(rr.Rrdatas) != 1 || rr.Rrdatas[0] != bastionIP {
-				logger.Info("Bastion record exists but its not up to date. Updating record")
-
-				_, err = r.dnsService.ResourceRecordSets.Patch(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA, record).
-					Context(ctx).
-					Do()
-				if err != nil {
-					return microerror.Mask(err)
-				}
-				logger.Info("Updated Bastion record", "ip", bastionIP)
-			} else {
-				logger.Info("Skipping. Record already exists")
-				continue
 			}
 		} else if err != nil {
 			return microerror.Mask(err)
@@ -96,33 +73,59 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 func (r *Bastion) Unregister(ctx context.Context, cluster *capg.GCPCluster) error {
 	logger := r.getLogger(ctx)
 
-	bastionIPList, err := r.bastionsClient.GetBastionIPList(ctx, cluster)
+	recordList, err := r.dnsService.ResourceRecordSets.List(cluster.Spec.Project, cluster.Name).
+		Context(ctx).
+		Do()
+
 	if err != nil {
 		return microerror.Mask(err)
 	}
 
-	for i := range bastionIPList {
-		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
-		logger := logger.WithValues("record", bastionDomain)
-		logger.Info("Unregistering record")
+	for _, record := range recordList.Rrsets {
+		// remove all bastion dns records
+		if strings.Contains(record.Name, "bastion") {
+			logger := logger.WithValues("record", record.Name)
+			logger.Info("Unregistering record")
 
-		_, err = r.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, bastionDomain, RecordA).
+			_, err = r.dnsService.ResourceRecordSets.Delete(cluster.Spec.Project, cluster.Name, record.Name, RecordA).
+				Context(ctx).
+				Do()
+
+			if hasHttpCode(err, http.StatusNotFound) {
+				logger.Info("Skipping. Record already unregistered")
+				continue
+			}
+			if err != nil {
+				return microerror.Mask(err)
+			}
+			logger.Info("Done unregistering record")
+		}
+	}
+	return nil
+}
+
+func (r *Bastion) updateBastionRecordIfNotUptoDate(ctx context.Context, cluster *capg.GCPCluster, bastionRecord *clouddns.ResourceRecordSet, logger logr.Logger) error {
+	bastionIP := bastionRecord.Rrdatas[0]
+	// record exists, check if the IP matches
+	rr, err := r.dnsService.ResourceRecordSets.Get(cluster.Spec.Project, cluster.Name, bastionRecord.Name, RecordA). //nolint:govet
+																Context(ctx).
+																Do()
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	if len(rr.Rrdatas) > 0 || rr.Rrdatas[0] != bastionIP {
+		logger.Info("Bastion record exists but its not up to date. Updating record")
+
+		_, err = r.dnsService.ResourceRecordSets.Patch(cluster.Spec.Project, cluster.Name, bastionRecord.Name, RecordA, bastionRecord).
 			Context(ctx).
 			Do()
-
-		if hasHttpCode(err, http.StatusNotFound) {
-			logger.Info("Skipping. Record already unregistered")
-			continue
-		}
 		if err != nil {
 			return microerror.Mask(err)
 		}
-		logger.Info("Done unregistering record")
-	}
-
-	err = r.bastionsClient.RemoveFinalizerFromBastions(ctx, cluster)
-	if err != nil {
-		return microerror.Mask(err)
+		logger.Info("Updated Bastion record", "ip", bastionIP)
+	} else {
+		logger.Info("Skipping. Record already exists and is up to date.")
 	}
 
 	return nil

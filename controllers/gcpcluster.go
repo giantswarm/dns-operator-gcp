@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/giantswarm/microerror"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -98,7 +99,7 @@ func (r *GCPClusterReconciler) reconcileNormal(ctx context.Context, gcpCluster *
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{Requeue: true, RequeueAfter: time.Minute * 10}, nil
 }
 
 func (r *GCPClusterReconciler) reconcileDelete(ctx context.Context, gcpCluster *capg.GCPCluster) (ctrl.Result, error) {

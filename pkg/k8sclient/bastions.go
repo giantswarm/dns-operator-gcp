@@ -8,7 +8,6 @@ import (
 	"github.com/giantswarm/microerror"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const LabelBastionKey = "cluster.x-k8s.io/deployment-name"
@@ -37,6 +36,10 @@ func (b *Bastions) GetBastionIPList(ctx context.Context, cluster *capg.GCPCluste
 		if len(machine.Status.Addresses) == 0 {
 			return nil, microerror.Mask(errors.New("bastion IP is not yet available"))
 		}
+		if !machine.DeletionTimestamp.IsZero() {
+			continue
+		}
+
 		for _, addr := range machine.Status.Addresses {
 			if addr.Type == "ExternalIP" {
 				bastionPublicIPList = append(bastionPublicIPList, addr.Address)
@@ -69,43 +72,4 @@ func (b *Bastions) getBastionMachineList(ctx context.Context, cluster *capg.GCPC
 
 func BastionLabel(clusterName string) string {
 	return fmt.Sprintf("%s-bastion", clusterName)
-}
-
-func (b *Bastions) AddFinalizerToBastions(ctx context.Context, cluster *capg.GCPCluster) error {
-	machineList, err := b.getBastionMachineList(ctx, cluster)
-	if err != nil {
-		return microerror.Mask(err)
-	}
-
-	for _, bastion := range machineList.Items {
-		if !bastion.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		original := bastion.DeepCopy()
-		controllerutil.AddFinalizer(&bastion, b.finalizer)
-		err := b.client.Patch(ctx, &bastion, client.MergeFrom(original))
-
-		if err != nil {
-			return microerror.Mask(err)
-		}
-	}
-	return nil
-}
-
-func (b *Bastions) RemoveFinalizerFromBastions(ctx context.Context, cluster *capg.GCPCluster) error {
-	machineList, err := b.getBastionMachineList(ctx, cluster)
-	if err != nil {
-		return microerror.Mask(err)
-	}
-	for _, bastion := range machineList.Items {
-		original := bastion.DeepCopy()
-		controllerutil.RemoveFinalizer(&bastion, b.finalizer)
-		err := b.client.Patch(ctx, &bastion, client.MergeFrom(original))
-
-		if err != nil {
-			return microerror.Mask(err)
-		}
-	}
-	return nil
 }
