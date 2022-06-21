@@ -114,7 +114,7 @@ func (r *Bastion) updateBastionRecordIfNotUptoDate(ctx context.Context, cluster 
 		return microerror.Mask(err)
 	}
 
-	if len(rr.Rrdatas) > 0 || rr.Rrdatas[0] != bastionIP {
+	if len(rr.Rrdatas) != 1 || rr.Rrdatas[0] != bastionIP {
 		logger.Info("Bastion record exists but its not up to date. Updating record")
 
 		_, err = r.dnsService.ResourceRecordSets.Patch(cluster.Spec.Project, cluster.Name, bastionRecord.Name, RecordA, bastionRecord).
