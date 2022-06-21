@@ -203,8 +203,8 @@ var _ = Describe("DNS", func() {
 			Expect(k8sClient.Delete(ctx, cluster)).To(Succeed())
 		})
 
-		It("creates the cluster DNS records", func() {
-			By("not preventng the cluster deletion")
+		It("removes the cluster DNS records", func() {
+			By("not preventing the cluster deletion")
 			nsName := types.NamespacedName{
 				Name:      gcpCluster.Name,
 				Namespace: gcpCluster.Namespace,
