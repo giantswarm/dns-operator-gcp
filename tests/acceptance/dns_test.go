@@ -16,6 +16,7 @@ import (
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
 	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
 	"github.com/giantswarm/dns-operator-gcp/tests"
 )
@@ -28,9 +29,11 @@ var _ = Describe("DNS", func() {
 		clusterName   string
 		clusterDomain string
 		apiDomain     string
+		bastionDomain string
 		ingressDomain string
 		cluster       *capi.Cluster
 		gcpCluster    *capg.GCPCluster
+		machine       *capg.GCPMachine
 	)
 
 	BeforeEach(func() {
@@ -41,6 +44,7 @@ var _ = Describe("DNS", func() {
 		clusterName = tests.GenerateGUID("test")
 		clusterDomain = fmt.Sprintf("%s.%s.", clusterName, baseDomain)
 		apiDomain = fmt.Sprintf("%s.%s", registrar.EndpointAPI, clusterDomain)
+		bastionDomain = fmt.Sprintf("%s.%s", registrar.EndpointBastion(1), clusterDomain)
 		ingressDomain = fmt.Sprintf("%s.%s", registrar.EndpointIngress, clusterDomain)
 
 		resolver = &net.Resolver{
@@ -113,6 +117,29 @@ var _ = Describe("DNS", func() {
 
 		err := k8sClient.Status().Patch(ctx, patchedService, client.MergeFrom(service))
 		Expect(err).NotTo(HaveOccurred())
+
+		machine = &capg.GCPMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cluster-bastion-1",
+				Namespace: namespace,
+				Labels: map[string]string{
+					k8sclient.LabelBastionKey: k8sclient.BastionLabel(clusterName),
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, machine)).To(Succeed())
+
+		patchedMachine := machine.DeepCopy()
+		patchedMachine.Status = capg.GCPMachineStatus{
+			Addresses: []corev1.NodeAddress{
+				{
+					Type:    "ExternalIP",
+					Address: "1.2.3.4",
+				},
+			},
+		}
+		Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
+
 	})
 
 	It("creates the cluster DNS records", func() {
@@ -136,6 +163,45 @@ var _ = Describe("DNS", func() {
 
 		Expect(records).To(HaveLen(1))
 		Expect(records[0].String()).To(Equal("10.0.0.1"))
+
+		By("creating an A record for the bastion1")
+		Eventually(func() error {
+			var err error
+			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
+			return err
+		}).Should(Succeed())
+
+		Expect(records).To(HaveLen(1))
+		Expect(records[0].String()).To(Equal("1.2.3.4"))
+
+		By("updating an A record for the bastion1")
+		// update bastion machine with different IP
+		patchedMachine := machine.DeepCopy()
+		patchedMachine.Status.Addresses = []corev1.NodeAddress{
+			{
+				Type:    "ExternalIP",
+				Address: "1.2.3.5",
+			},
+		}
+		Expect(k8sClient.Status().Patch(ctx, patchedMachine, client.MergeFrom(machine))).To(Succeed())
+
+		// trigger reconciliation loop by update to speed up tests
+		patchedCluster := gcpCluster.DeepCopy()
+		patchedCluster.Labels = map[string]string{
+			"extra": "label",
+		}
+		Expect(k8sClient.Status().Patch(ctx, patchedCluster, client.MergeFrom(gcpCluster))).To(Succeed())
+
+		Eventually(func(g Gomega) (string, error) {
+			var err error
+			records, err = resolver.LookupIP(ctx, "ip", bastionDomain)
+			if err != nil {
+				return "", err
+			}
+
+			g.Expect(records).To(HaveLen(1))
+			return records[0].String(), nil
+		}).Should(Equal("1.2.3.5"))
 
 		By("creating an A record for the ingress")
 		Eventually(func() error {

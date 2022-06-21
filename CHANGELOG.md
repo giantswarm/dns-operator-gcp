@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add DNS record for bastion nodes.
+
 ## [0.4.0] - 2022-06-02
 
 - Ignore non LoadBalancer services when registering ingress record. The nginx ingress app installs multiple ClusterIP services.
