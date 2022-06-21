@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/miekg/dns"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -175,24 +176,20 @@ var _ = Describe("DNS", func() {
 
 		By("creating a CNAME record for the wildcard domain")
 		wildcardDomain := fmt.Sprintf("%s.%s", uuid.NewString(), clusterDomain)
-		var record string
+		var dnsResponse *dns.Msg
 		Eventually(func() error {
 			var err error
-			record, err = resolver.LookupCNAME(ctx, wildcardDomain)
+			dnsMessage := new(dns.Msg)
+			dnsMessage.SetQuestion(wildcardDomain, dns.TypeCNAME)
+			dnsMessage.RecursionDesired = true
+
+			dnsClient := new(dns.Client)
+			dnsResponse, _, err = dnsClient.Exchange(dnsMessage, "8.8.8.8:53")
+
 			return err
 		}).Should(Succeed())
 
-		Expect(record).To(Equal(ingressDomain))
-
-		By("creating an A record for the wildcard domain")
-		var hostRecords []string
-		Eventually(func() error {
-			var err error
-			hostRecords, err = resolver.LookupHost(ctx, wildcardDomain)
-			return err
-		}).Should(Succeed())
-
-		Expect(hostRecords).To(ConsistOf("10.0.0.2"))
+		Expect(dnsResponse.Answer[0].(*dns.CNAME).Target).To(Equal(ingressDomain))
 	})
 
 	When("the cluster is deleted", func() {
