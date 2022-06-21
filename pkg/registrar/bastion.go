@@ -83,7 +83,7 @@ func (r *Bastion) Unregister(ctx context.Context, cluster *capg.GCPCluster) erro
 
 	for _, record := range recordList.Rrsets {
 		// remove all bastion dns records
-		if strings.Contains(record.Name, "bastion") {
+		if strings.HasPrefix(record.Name, "bastion") {
 			logger := logger.WithValues("record", record.Name)
 			logger.Info("Unregistering record")
 
