@@ -176,16 +176,16 @@ var _ = Describe("DNS", func() {
 
 		By("creating a CNAME record for the wildcard domain")
 		wildcardDomain := fmt.Sprintf("%s.%s", uuid.NewString(), clusterDomain)
+
+		dnsMessage := new(dns.Msg)
+		dnsMessage.SetQuestion(wildcardDomain, dns.TypeCNAME)
+		dnsMessage.RecursionDesired = true
+
+		dnsClient := new(dns.Client)
 		var dnsResponse *dns.Msg
 		Eventually(func() error {
 			var err error
-			dnsMessage := new(dns.Msg)
-			dnsMessage.SetQuestion(wildcardDomain, dns.TypeCNAME)
-			dnsMessage.RecursionDesired = true
-
-			dnsClient := new(dns.Client)
 			dnsResponse, _, err = dnsClient.Exchange(dnsMessage, "8.8.8.8:53")
-
 			return err
 		}).Should(Succeed())
 
