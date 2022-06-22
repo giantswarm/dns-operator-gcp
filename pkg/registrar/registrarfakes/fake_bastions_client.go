@@ -11,18 +11,6 @@ import (
 )
 
 type FakeBastionsClient struct {
-	AddFinalizerToBastionsStub        func(context.Context, *v1beta1.GCPCluster) error
-	addFinalizerToBastionsMutex       sync.RWMutex
-	addFinalizerToBastionsArgsForCall []struct {
-		arg1 context.Context
-		arg2 *v1beta1.GCPCluster
-	}
-	addFinalizerToBastionsReturns struct {
-		result1 error
-	}
-	addFinalizerToBastionsReturnsOnCall map[int]struct {
-		result1 error
-	}
 	GetBastionIPListStub        func(context.Context, *v1beta1.GCPCluster) ([]string, error)
 	getBastionIPListMutex       sync.RWMutex
 	getBastionIPListArgsForCall []struct {
@@ -37,82 +25,8 @@ type FakeBastionsClient struct {
 		result1 []string
 		result2 error
 	}
-	RemoveFinalizerFromBastionsStub        func(context.Context, *v1beta1.GCPCluster) error
-	removeFinalizerFromBastionsMutex       sync.RWMutex
-	removeFinalizerFromBastionsArgsForCall []struct {
-		arg1 context.Context
-		arg2 *v1beta1.GCPCluster
-	}
-	removeFinalizerFromBastionsReturns struct {
-		result1 error
-	}
-	removeFinalizerFromBastionsReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeBastionsClient) AddFinalizerToBastions(arg1 context.Context, arg2 *v1beta1.GCPCluster) error {
-	fake.addFinalizerToBastionsMutex.Lock()
-	ret, specificReturn := fake.addFinalizerToBastionsReturnsOnCall[len(fake.addFinalizerToBastionsArgsForCall)]
-	fake.addFinalizerToBastionsArgsForCall = append(fake.addFinalizerToBastionsArgsForCall, struct {
-		arg1 context.Context
-		arg2 *v1beta1.GCPCluster
-	}{arg1, arg2})
-	stub := fake.AddFinalizerToBastionsStub
-	fakeReturns := fake.addFinalizerToBastionsReturns
-	fake.recordInvocation("AddFinalizerToBastions", []interface{}{arg1, arg2})
-	fake.addFinalizerToBastionsMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeBastionsClient) AddFinalizerToBastionsCallCount() int {
-	fake.addFinalizerToBastionsMutex.RLock()
-	defer fake.addFinalizerToBastionsMutex.RUnlock()
-	return len(fake.addFinalizerToBastionsArgsForCall)
-}
-
-func (fake *FakeBastionsClient) AddFinalizerToBastionsCalls(stub func(context.Context, *v1beta1.GCPCluster) error) {
-	fake.addFinalizerToBastionsMutex.Lock()
-	defer fake.addFinalizerToBastionsMutex.Unlock()
-	fake.AddFinalizerToBastionsStub = stub
-}
-
-func (fake *FakeBastionsClient) AddFinalizerToBastionsArgsForCall(i int) (context.Context, *v1beta1.GCPCluster) {
-	fake.addFinalizerToBastionsMutex.RLock()
-	defer fake.addFinalizerToBastionsMutex.RUnlock()
-	argsForCall := fake.addFinalizerToBastionsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeBastionsClient) AddFinalizerToBastionsReturns(result1 error) {
-	fake.addFinalizerToBastionsMutex.Lock()
-	defer fake.addFinalizerToBastionsMutex.Unlock()
-	fake.AddFinalizerToBastionsStub = nil
-	fake.addFinalizerToBastionsReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeBastionsClient) AddFinalizerToBastionsReturnsOnCall(i int, result1 error) {
-	fake.addFinalizerToBastionsMutex.Lock()
-	defer fake.addFinalizerToBastionsMutex.Unlock()
-	fake.AddFinalizerToBastionsStub = nil
-	if fake.addFinalizerToBastionsReturnsOnCall == nil {
-		fake.addFinalizerToBastionsReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.addFinalizerToBastionsReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *FakeBastionsClient) GetBastionIPList(arg1 context.Context, arg2 *v1beta1.GCPCluster) ([]string, error) {
@@ -180,77 +94,11 @@ func (fake *FakeBastionsClient) GetBastionIPListReturnsOnCall(i int, result1 []s
 	}{result1, result2}
 }
 
-func (fake *FakeBastionsClient) RemoveFinalizerFromBastions(arg1 context.Context, arg2 *v1beta1.GCPCluster) error {
-	fake.removeFinalizerFromBastionsMutex.Lock()
-	ret, specificReturn := fake.removeFinalizerFromBastionsReturnsOnCall[len(fake.removeFinalizerFromBastionsArgsForCall)]
-	fake.removeFinalizerFromBastionsArgsForCall = append(fake.removeFinalizerFromBastionsArgsForCall, struct {
-		arg1 context.Context
-		arg2 *v1beta1.GCPCluster
-	}{arg1, arg2})
-	stub := fake.RemoveFinalizerFromBastionsStub
-	fakeReturns := fake.removeFinalizerFromBastionsReturns
-	fake.recordInvocation("RemoveFinalizerFromBastions", []interface{}{arg1, arg2})
-	fake.removeFinalizerFromBastionsMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeBastionsClient) RemoveFinalizerFromBastionsCallCount() int {
-	fake.removeFinalizerFromBastionsMutex.RLock()
-	defer fake.removeFinalizerFromBastionsMutex.RUnlock()
-	return len(fake.removeFinalizerFromBastionsArgsForCall)
-}
-
-func (fake *FakeBastionsClient) RemoveFinalizerFromBastionsCalls(stub func(context.Context, *v1beta1.GCPCluster) error) {
-	fake.removeFinalizerFromBastionsMutex.Lock()
-	defer fake.removeFinalizerFromBastionsMutex.Unlock()
-	fake.RemoveFinalizerFromBastionsStub = stub
-}
-
-func (fake *FakeBastionsClient) RemoveFinalizerFromBastionsArgsForCall(i int) (context.Context, *v1beta1.GCPCluster) {
-	fake.removeFinalizerFromBastionsMutex.RLock()
-	defer fake.removeFinalizerFromBastionsMutex.RUnlock()
-	argsForCall := fake.removeFinalizerFromBastionsArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeBastionsClient) RemoveFinalizerFromBastionsReturns(result1 error) {
-	fake.removeFinalizerFromBastionsMutex.Lock()
-	defer fake.removeFinalizerFromBastionsMutex.Unlock()
-	fake.RemoveFinalizerFromBastionsStub = nil
-	fake.removeFinalizerFromBastionsReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeBastionsClient) RemoveFinalizerFromBastionsReturnsOnCall(i int, result1 error) {
-	fake.removeFinalizerFromBastionsMutex.Lock()
-	defer fake.removeFinalizerFromBastionsMutex.Unlock()
-	fake.RemoveFinalizerFromBastionsStub = nil
-	if fake.removeFinalizerFromBastionsReturnsOnCall == nil {
-		fake.removeFinalizerFromBastionsReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.removeFinalizerFromBastionsReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeBastionsClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.addFinalizerToBastionsMutex.RLock()
-	defer fake.addFinalizerToBastionsMutex.RUnlock()
 	fake.getBastionIPListMutex.RLock()
 	defer fake.getBastionIPListMutex.RUnlock()
-	fake.removeFinalizerFromBastionsMutex.RLock()
-	defer fake.removeFinalizerFromBastionsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

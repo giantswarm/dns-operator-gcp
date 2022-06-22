@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/miekg/dns"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -87,36 +88,6 @@ var _ = Describe("DNS", func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, gcpCluster)).To(Succeed())
-
-		service := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ingress-service",
-				Namespace: registrar.IngressNamespace,
-				Labels: map[string]string{
-					registrar.LabelIngressKey: registrar.LabelIngressValue,
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Type: corev1.ServiceTypeLoadBalancer,
-				Ports: []corev1.ServicePort{
-					{Port: 8080},
-				},
-			},
-		}
-
-		patchedService := service.DeepCopy()
-		patchedService.Status = corev1.ServiceStatus{
-			LoadBalancer: corev1.LoadBalancerStatus{
-				Ingress: []corev1.LoadBalancerIngress{
-					{
-						IP: "10.0.0.2",
-					},
-				},
-			},
-		}
-
-		err := k8sClient.Status().Patch(ctx, patchedService, client.MergeFrom(service))
-		Expect(err).NotTo(HaveOccurred())
 
 		machine = &capg.GCPMachine{
 			ObjectMeta: metav1.ObjectMeta{
@@ -203,36 +174,22 @@ var _ = Describe("DNS", func() {
 			return records[0].String(), nil
 		}).Should(Equal("1.2.3.5"))
 
-		By("creating an A record for the ingress")
-		Eventually(func() error {
-			var err error
-			records, err = resolver.LookupIP(ctx, "ip", ingressDomain)
-			return err
-		}).Should(Succeed())
-
-		Expect(records).To(HaveLen(1))
-		Expect(records[0].String()).To(Equal("10.0.0.2"))
-
 		By("creating a CNAME record for the wildcard domain")
 		wildcardDomain := fmt.Sprintf("%s.%s", uuid.NewString(), clusterDomain)
-		var record string
+
+		dnsMessage := new(dns.Msg)
+		dnsMessage.SetQuestion(wildcardDomain, dns.TypeCNAME)
+		dnsMessage.RecursionDesired = true
+
+		dnsClient := new(dns.Client)
+		var dnsResponse *dns.Msg
 		Eventually(func() error {
 			var err error
-			record, err = resolver.LookupCNAME(ctx, wildcardDomain)
+			dnsResponse, _, err = dnsClient.Exchange(dnsMessage, "8.8.8.8:53")
 			return err
 		}).Should(Succeed())
 
-		Expect(record).To(Equal(ingressDomain))
-
-		By("creating an A record for the wildcard domain")
-		var hostRecords []string
-		Eventually(func() error {
-			var err error
-			hostRecords, err = resolver.LookupHost(ctx, wildcardDomain)
-			return err
-		}).Should(Succeed())
-
-		Expect(hostRecords).To(ConsistOf("10.0.0.2"))
+		Expect(dnsResponse.Answer[0].(*dns.CNAME).Target).To(Equal(ingressDomain))
 	})
 
 	When("the cluster is deleted", func() {
@@ -246,8 +203,8 @@ var _ = Describe("DNS", func() {
 			Expect(k8sClient.Delete(ctx, cluster)).To(Succeed())
 		})
 
-		It("creates the cluster DNS records", func() {
-			By("not preventng the cluster deletion")
+		It("removes the cluster DNS records", func() {
+			By("not preventing the cluster deletion")
 			nsName := types.NamespacedName{
 				Name:      gcpCluster.Name,
 				Namespace: gcpCluster.Namespace,

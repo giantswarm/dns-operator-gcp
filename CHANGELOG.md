@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Remove ingress registrar, as ingress DNS record will be created by external-dns.
+
 ## [0.5.1] - 2022-06-22
 
 ### Fixed
@@ -15,9 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2022-06-22
 
+### Added
+
 - Add DNS record for bastion nodes.
 
 ## [0.4.0] - 2022-06-02
+
+### Changed
 
 - Ignore non LoadBalancer services when registering ingress record. The nginx ingress app installs multiple ClusterIP services.
 
