@@ -7,15 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Add DNS record for bastion nodes.
-
 ### Removed
 
 - Remove ingress registrar, as ingress DNS record will be created by external-dns.
 
+## [0.5.1] - 2022-06-22
+
+### Fixed
+
+- Skip deletion when the zone is deleted.
+
+## [0.5.0] - 2022-06-22
+
+### Added
+
+- Add DNS record for bastion nodes.
+
 ## [0.4.0] - 2022-06-02
+
+### Changed
 
 - Ignore non LoadBalancer services when registering ingress record. The nginx ingress app installs multiple ClusterIP services.
 
@@ -31,7 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2022-05-05
 
-[Unreleased]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/giantswarm/dns-operator-gcp/compare/v0.1.0...v0.2.0

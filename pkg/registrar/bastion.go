@@ -77,7 +77,10 @@ func (r *Bastion) Unregister(ctx context.Context, cluster *capg.GCPCluster) erro
 		Context(ctx).
 		Do()
 
-	if err != nil {
+	if hasHttpCode(err, http.StatusNotFound) {
+		logger.Info("Skipping. Zone already unregistered")
+		return nil
+	} else if err != nil {
 		return microerror.Mask(err)
 	}
 
