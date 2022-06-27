@@ -117,37 +117,50 @@ var _ = Describe("Bastion Registrar", func() {
 	Describe("Unregister", func() {
 		var unregistErr error
 
-		BeforeEach(func() {
-			err := bastionRegistrar.Register(ctx, cluster)
-			Expect(err).NotTo(HaveOccurred())
-		})
+		When("the zone is not registered", func() {
+			JustBeforeEach(func() {
+				unregistErr = bastionRegistrar.Unregister(ctx, cluster)
+			})
 
-		JustBeforeEach(func() {
-			unregistErr = bastionRegistrar.Unregister(ctx, cluster)
-		})
-
-		It("deletes the bastion A record", func() {
-			Expect(unregistErr).NotTo(HaveOccurred())
-
-			_, err := service.ResourceRecordSets.Get(gcpProject, clusterName, bastionDomain, registrar.RecordA).Do()
-			Expect(err).To(BeGoogleAPIErrorWithStatus(http.StatusNotFound))
-		})
-
-		When("the context has been cancelled", func() {
-			It("returns an error", func() {
-				var cancel context.CancelFunc
-				ctx, cancel = context.WithCancel(ctx)
-				cancel()
-
+			It("does not return an error", func() {
 				err := bastionRegistrar.Unregister(ctx, cluster)
-				Expect(err).To(MatchError(ContainSubstring("context canceled")))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
-		When("the record no longer exists", func() {
-			It("returns an error", func() {
-				err := bastionRegistrar.Unregister(ctx, cluster)
+		When("the zone is registered", func() {
+			BeforeEach(func() {
+				err := bastionRegistrar.Register(ctx, cluster)
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				unregistErr = bastionRegistrar.Unregister(ctx, cluster)
+			})
+
+			It("deletes the bastion A record", func() {
+				Expect(unregistErr).NotTo(HaveOccurred())
+
+				_, err := service.ResourceRecordSets.Get(gcpProject, clusterName, bastionDomain, registrar.RecordA).Do()
+				Expect(err).To(BeGoogleAPIErrorWithStatus(http.StatusNotFound))
+			})
+
+			When("the context has been cancelled", func() {
+				It("returns an error", func() {
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithCancel(ctx)
+					cancel()
+
+					err := bastionRegistrar.Unregister(ctx, cluster)
+					Expect(err).To(MatchError(ContainSubstring("context canceled")))
+				})
+			})
+
+			When("the record no longer exists", func() {
+				It("does not return an error", func() {
+					err := bastionRegistrar.Unregister(ctx, cluster)
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 	})
