@@ -40,31 +40,35 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 		return microerror.Mask(err)
 	}
 
-	for i, bastionIP := range bastionIPList {
-		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
-		logger := logger.WithValues("record", bastionDomain)
-		logger.Info("Registering record")
+	if len(bastionIPList) == 0 {
+		logger.Info("No bastion resource found, skipping DNS record creation")
+	} else {
+		for i, bastionIP := range bastionIPList {
+			bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
+			logger := logger.WithValues("record", bastionDomain)
+			logger.Info("Registering record")
 
-		record := &clouddns.ResourceRecordSet{
-			Name: bastionDomain,
-			Rrdatas: []string{
-				bastionIP,
-			},
-			Type: RecordA,
-		}
-		_, err = r.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
-			Context(ctx).
-			Do()
+			record := &clouddns.ResourceRecordSet{
+				Name: bastionDomain,
+				Rrdatas: []string{
+					bastionIP,
+				},
+				Type: RecordA,
+			}
+			_, err = r.dnsService.ResourceRecordSets.Create(cluster.Spec.Project, cluster.Name, record).
+				Context(ctx).
+				Do()
 
-		if hasHttpCode(err, http.StatusConflict) {
-			err = r.updateBastionRecordIfNotUptoDate(ctx, cluster, record, logger)
-			if err != nil {
+			if hasHttpCode(err, http.StatusConflict) {
+				err = r.updateBastionRecordIfNotUptoDate(ctx, cluster, record, logger)
+				if err != nil {
+					return microerror.Mask(err)
+				}
+			} else if err != nil {
 				return microerror.Mask(err)
 			}
-		} else if err != nil {
-			return microerror.Mask(err)
+			logger.Info("Done Registering record", "ip", bastionIP)
 		}
-		logger.Info("Done Registering record", "ip", bastionIP)
 	}
 
 	return nil
