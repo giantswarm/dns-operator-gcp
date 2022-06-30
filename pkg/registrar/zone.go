@@ -126,5 +126,5 @@ func (r *Zone) getClusterDomain(cluster *capg.GCPCluster) string {
 
 func (r *Zone) getLogger(ctx context.Context) logr.Logger {
 	logger := log.FromContext(ctx)
-	return logger.WithName("wildcard-registrar")
+	return logger.WithName("zone-registrar")
 }
