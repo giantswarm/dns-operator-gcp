@@ -40,6 +40,10 @@ func (r *Bastion) Register(ctx context.Context, cluster *capg.GCPCluster) error 
 		return microerror.Mask(err)
 	}
 
+	if len(bastionIPList) == 0 {
+		logger.Info("No bastion resource found, skipping DNS record creation")
+		return nil
+	}
 	for i, bastionIP := range bastionIPList {
 		bastionDomain := fmt.Sprintf("%s.%s.%s.", EndpointBastion(i+1), cluster.Name, r.baseDomain)
 		logger := logger.WithValues("record", bastionDomain)

@@ -48,10 +48,6 @@ func (b *Bastions) GetBastionIPList(ctx context.Context, cluster *capg.GCPCluste
 		}
 	}
 
-	if len(bastionPublicIPList) == 0 {
-		return nil, errors.New("bastion IP is not yet available")
-	}
-
 	return bastionPublicIPList, nil
 }
 

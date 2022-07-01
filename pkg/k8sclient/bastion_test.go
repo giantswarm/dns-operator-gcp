@@ -149,7 +149,7 @@ var _ = Describe("MachineList", func() {
 					},
 				}
 				ipList, err := bastions.GetBastionIPList(ctx, otherCluster)
-				Expect(err).To(MatchError(ContainSubstring(`bastion IP is not yet available`)))
+				Expect(err).To(BeNil())
 				Expect(ipList).To(BeNil())
 			})
 		})
