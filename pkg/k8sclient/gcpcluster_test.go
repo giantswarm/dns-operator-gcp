@@ -12,8 +12,8 @@ import (
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 
-	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
+	"github.com/giantswarm/dns-operator-gcp/v2/controllers"
+	"github.com/giantswarm/dns-operator-gcp/v2/pkg/k8sclient"
 )
 
 var _ = Describe("GCPCluster", func() {

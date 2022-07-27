@@ -7,7 +7,7 @@ import (
 
 	"sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 
-	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
+	"github.com/giantswarm/dns-operator-gcp/v2/pkg/registrar"
 )
 
 type FakeBastionsClient struct {

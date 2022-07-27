@@ -11,8 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 
-	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
-	"github.com/giantswarm/dns-operator-gcp/tests"
+	"github.com/giantswarm/dns-operator-gcp/v2/pkg/registrar"
+	"github.com/giantswarm/dns-operator-gcp/v2/tests"
 )
 
 var _ = Describe("API Registrar", func() {

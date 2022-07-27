@@ -35,9 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
-	"github.com/giantswarm/dns-operator-gcp/pkg/registrar"
+	"github.com/giantswarm/dns-operator-gcp/v2/controllers"
+	"github.com/giantswarm/dns-operator-gcp/v2/pkg/k8sclient"
+	"github.com/giantswarm/dns-operator-gcp/v2/pkg/registrar"
 	// +kubebuilder:scaffold:imports
 )
 

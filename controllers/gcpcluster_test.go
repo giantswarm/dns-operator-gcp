@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/controllers/controllersfakes"
+	"github.com/giantswarm/dns-operator-gcp/v2/controllers"
+	"github.com/giantswarm/dns-operator-gcp/v2/controllers/controllersfakes"
 )
 
 var _ = Describe("GCPClusterReconciler", func() {

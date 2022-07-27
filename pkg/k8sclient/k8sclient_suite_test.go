@@ -34,7 +34,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/giantswarm/dns-operator-gcp/tests"
+	"github.com/giantswarm/dns-operator-gcp/v2/tests"
 	//+kubebuilder:scaffold:imports
 )
 

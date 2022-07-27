@@ -1,4 +1,4 @@
-module github.com/giantswarm/dns-operator-gcp
+module github.com/giantswarm/dns-operator-gcp/v2
 
 go 1.17
 

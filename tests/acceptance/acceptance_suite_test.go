@@ -14,7 +14,7 @@ import (
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/giantswarm/dns-operator-gcp/tests"
+	"github.com/giantswarm/dns-operator-gcp/v2/tests"
 )
 
 var (

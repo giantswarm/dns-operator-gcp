@@ -11,8 +11,8 @@ import (
 	capg "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/giantswarm/dns-operator-gcp/controllers"
-	"github.com/giantswarm/dns-operator-gcp/pkg/k8sclient"
+	"github.com/giantswarm/dns-operator-gcp/v2/controllers"
+	"github.com/giantswarm/dns-operator-gcp/v2/pkg/k8sclient"
 )
 
 var _ = Describe("MachineList", func() {

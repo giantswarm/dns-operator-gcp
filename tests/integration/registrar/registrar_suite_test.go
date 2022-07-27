@@ -12,7 +12,7 @@ import (
 	"github.com/onsi/gomega/types"
 	"google.golang.org/api/googleapi"
 
-	"github.com/giantswarm/dns-operator-gcp/tests"
+	"github.com/giantswarm/dns-operator-gcp/v2/tests"
 )
 
 const slowTestThreshold = 30 * time.Second
