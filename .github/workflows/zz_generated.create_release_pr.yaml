@@ -1,6 +1,6 @@
 # DO NOT EDIT. Generated with:
 #
-#    devctl@5.8.0
+#    devctl@5.9.0
 #
 name: Create Release PR
 on:
@@ -95,7 +95,7 @@ jobs:
             version_major=$(echo "${version}" | cut -d "." -f 1)
             version_minor=$(echo "${version}" | cut -d "." -f 2)
             version_patch=$(echo "${version}" | cut -d "." -f 3)
-            if [[ $version_minor = 0 && $version_patch =~ ^0.* ]]; then
+            if [[ $version_minor = 0 && $version_patch = 0 ]]; then
               echo "::set-output name=is_major::true"
             fi
           fi
