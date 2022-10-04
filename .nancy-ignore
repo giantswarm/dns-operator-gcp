@@ -3,3 +3,8 @@
 CVE-2019-10743 until=2021-10-17
 CVE-2022-29153
 CVE-2022-24687
+
+# pkg:golang/github.com/hashicorp/consul/api@v1.10.1
+# Hashicorp consul /api and /sdk are no longer intended for public use and don't have newer tags.
+# Waiting for direct dependencies to move away from them.
+CVE-2021-41803
