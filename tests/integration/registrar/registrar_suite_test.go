@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,8 +14,6 @@ import (
 	"github.com/giantswarm/dns-operator-gcp/tests"
 )
 
-const slowTestThreshold = 30 * time.Second
-
 var (
 	baseDomain    string
 	parentDNSZone string
@@ -25,7 +22,6 @@ var (
 
 func TestRegistrar(t *testing.T) {
 	suiteConfig, reporterConfig := GinkgoConfiguration()
-	reporterConfig.SlowSpecThreshold = slowTestThreshold
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Registrar Suite", suiteConfig, reporterConfig)
