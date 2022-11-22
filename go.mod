@@ -1,6 +1,6 @@
 module github.com/giantswarm/dns-operator-gcp
 
-go 1.17
+go 1.19
 
 replace (
 	// Fix non CVE vulnerability: sonatype-2020-1759 in aws/aws-sdk-go v1.8.39
