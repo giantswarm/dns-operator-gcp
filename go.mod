@@ -13,7 +13,7 @@ replace (
 	github.com/containerd/containerd => github.com/containerd/containerd v1.6.6
 
 	// Fix vulnerability: CVE-2020-15114 in etcd v3.3.13+incompatible
-	github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
+	github.com/coreos/etcd => github.com/coreos/etcd v3.3.27+incompatible
 
 	// Fix vulnerability: CVE-2020-26160 in dgrijalva/jwt-go v3.2.0
 	// This package is archived and is replaced by golang-jwt/jwt
