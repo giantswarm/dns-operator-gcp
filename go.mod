@@ -23,7 +23,7 @@ replace (
 	github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.2
 
 	// Fix non CVE vulnerability: sonatype-2019-0890 in pkg/sftp v1.10.1
-	github.com/pkg/sftp => github.com/pkg/sftp v1.13.4
+	github.com/pkg/sftp => github.com/pkg/sftp v1.13.6
 
 	// Explicitly use newest version of cluster-api, instead of one brought
 	// from cluster-api-provider-gcp@v1.0.2
