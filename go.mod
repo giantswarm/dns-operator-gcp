@@ -34,7 +34,7 @@ replace (
 require (
 	github.com/giantswarm/microerror v0.4.0
 	github.com/go-logr/logr v1.2.3
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.4.0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
 	github.com/miekg/dns v1.1.50
 	github.com/onsi/ginkgo/v2 v2.5.1
